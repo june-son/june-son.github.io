@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"june-son.github.io","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="kong的代码运行于nginx的worker进程中。kong对数据的修改会在一个worker中进行，修改后需通知给本机其他worker进程和其他机器上的worker进程。kong 会将数据库记录缓存起来，这里只是缓存kong自身数据比如插件,  service, route 数据, 自定义插件的数据表数据并未缓存, 例如: rate limit 插件的数据也要自己通过kong.cache来缓存,">
+<meta property="og:type" content="article">
+<meta property="og:title" content="kong源码分析记要">
+<meta property="og:url" content="https://june-son.github.io/2021/02/27/kong%20%E5%86%85%E5%AD%98/index.html">
+<meta property="og:site_name" content="俊生的博客">
+<meta property="og:description" content="kong的代码运行于nginx的worker进程中。kong对数据的修改会在一个worker中进行，修改后需通知给本机其他worker进程和其他机器上的worker进程。kong 会将数据库记录缓存起来，这里只是缓存kong自身数据比如插件,  service, route 数据, 自定义插件的数据表数据并未缓存, 例如: rate limit 插件的数据也要自己通过kong.cache来缓存,">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2021-02-27T07:30:20.936Z">
+<meta property="article:modified_time" content="2021-02-27T07:30:20.936Z">
+<meta property="article:author" content="juneson">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://june-son.github.io/2021/02/27/kong%20%E5%86%85%E5%AD%98/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'en'
+  };
+</script>
+
+  <title>kong源码分析记要 | 俊生的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">俊生的博客</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>Categories</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>Archives</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="https://june-son.github.io/2021/02/27/kong%20%E5%86%85%E5%AD%98/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="juneson">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="俊生的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          kong源码分析记要
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-02-27 15:30:20" itemprop="dateCreated datePublished" datetime="2021-02-27T15:30:20+08:00">2021-02-27</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/API%E7%BD%91%E5%85%B3/" itemprop="url" rel="index"><span itemprop="name">API网关</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>kong的代码运行于nginx的worker进程中。kong对数据的修改会在一个worker中进行，修改后需通知给本机其他worker进程和其他机器上的worker进程。<br>kong 会将数据库记录缓存起来，这里只是缓存kong自身数据比如插件,  service, route 数据, 自定义插件的数据表数据并未缓存, 例如: rate limit 插件的数据也要自己通过kong.cache来缓存,  通过/etc/kong/kong.conf 配置db_update_frequency确定更新route, service, plugins等数据的缓存时间。</p>
+<p><strong>kong使用的进程间通信主要方式有：</strong></p>
+<ol>
+<li>本机间通信-共享内存 </li>
+<li>跨机器通信-数据库</li>
+</ol>
+<span id="more"></span>
+
+<p><strong>数据共享</strong></p>
+<p>kong 数据存在数据库，同时在缓存中保留一份。</p>
+<p>当数据库数据被修改，需发出事件通知其他worker。其他worker收到事件后，删除缓存中对应的数据。</p>
+<p><strong>事件</strong></p>
+<p>1.本地事件: 通知本机上的worker,    由 lua-resty-worker-events 来处理</p>
+<p>2.集群事件: 通知在多台机器上的worker,  由 cluster_events.lua 来处理</p>
+<p><strong>本地事件(共享内存)</strong><br>  本地事件: 通过共享内存实现。</p>
+<p>​    kong实现了一套基于nginx共享内存的事件发布-订阅机制，源码见仓库<a target="_blank" rel="noopener" href="https://github.com/Kong/lua-resty-worker-events">https://github.com/Kong/lua-resty-worker-events</a>。</p>
+<p>​       该包提供post_local方法在worker进程内进行事件发布<br>​       提供post方法在本机worker进程间进行事件发布<br>​       这2个方法需要指定source, event来确定事件源。<br>  kong的数据访问层dao.lua封装了insert、update和delete三个对数据操作的方法。</p>
+<p>​        这三个方法分别会使用post_local发出<br>          source为：  dao:crud<br>          event为insert、delete、update 事件。</p>
+<p>​    <strong>事件的数据格式如下:</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">   schema    &#x3D; self.schema, --表名</span><br><span class="line">   operation &#x3D; &quot;create&quot;, --操作类型</span><br><span class="line">   entity    &#x3D; res, --数据</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>​    worker进程启动的时候会在init_worker阶段注册这些事件的订阅方法，见/usr/local/share/lua/5.1/kong/runloop/handler.lua:worker_events.register。</p>
+<p>​        订阅方法中把所有的dao:crud事件按表名称使用post_local再进行分发。</p>
+<p><strong>集群事件(数据库)</strong></p>
+<p>​    集群事件通过数据库实现。数据库表cluster_events存放用于集群间分发的事件.</p>
+<pre><code>  Column   |           Type           | Collation | Nullable | Default 
+```
+
+-----------+--------------------------+-----------+----------+---------
+ id        | uuid                     |           | not null | 
+ node_id   | uuid                     |           | not null | 
+ at        | timestamp with time zone |           | not null | 
+ nbf       | timestamp with time zone |           |          | 
+ expire_at | timestamp with time zone |           | not null | 
+ channel   | text                     |           |          | 
+ data      | text                     |           |          | 
+</code></pre>
+<p> <strong>channel的类型有:</strong></p>
+<ul>
+<li>invalidations,  表示路由规则、插件配置的变更</li>
+<li>balancer:targets, 表示负载均衡的targets列表发生变更</li>
+<li>balancer:upstreams, 表示upstream对象发生变更</li>
+<li>balancer:post_health, 表示target的健康状态发生变更。由于被动健康检查拉出实例后，kong不会在对该实例进行自动拉入，需要通过该事件来拉入实例。</li>
+</ul>
+<p>./runloop/handler.lua </p>
+<p>​         调用 cluster_events.lua 代码中的 _M:broadcast(channel, data, nbf)方法会往cluster_events表中新增一条记录。<br>​         在init_worker阶段通过调用cluster_events:subscribe开启一个定时器，定时查询出cluster_events表中新增的记录。注意: 本机只会有一个worker进程会对数据库进行查询(通过加锁实现，代码见cluster_events:get_lock)，查询出来后再通过共享内存的方式通知给本机其他worker.<br>​        /etc/kong/kong.conf#db_update_frequency 配置参数db_update_frequency 用于确定查询数据库的间隔.   数据范围根据at字段是否落在(起始时间, 结束时间]确定。起始时间第一次设置在init_worker阶段，调用ngx.now()获取当前时间(精确到毫秒)并放入key为cluster_events:at的共享内存中。之后抢到锁的worker会从共享内存中取出该时间，该时间需要减去db_update_propagation + 0.001来确定起始时间，以防止事件丢失。配置参数db_update_propagation默认为0。结束时间取ngx.now()的值。查询成功后会把结束时间覆盖之前的起始时间，并把该事件分发到本机的其他worker。对于设置了nbf的事件，kong如果发现还没到生效时间，就会通过ngx.timer设置一个定时器延后分发该事件.</p>
+<p>详见:  /usr/local/share/lua/5.1/kong/init.lua 的 Kong.init_worker() 中:</p>
+<pre><code>      local cluster_events, err = kong_cluster_events.new &#123;
+              db                      = kong.db,
+            poll_interval           = kong.configuration.db_update_frequency,
+            poll_offset             = kong.configuration.db_update_propagation, 
+      &#125;
+</code></pre>
+<p> Kong 通过这两个核心组件来完成集群中各个节点的状态更新。多个 Kong 节点连接到相同数据库时，便构建起了一个可以动态水平扩展的集群。</p>
+<ul>
+<li>多级缓存 lua-resty-mlcache   <a target="_blank" rel="noopener" href="https://github.com/thibaultcha/lua-resty-mlcache">https://github.com/thibaultcha/lua-resty-mlcache</a></li>
+<li>worker 间事件通讯 lua-resty-worker-events </li>
+<li>避免缓存失效风暴,  加锁策略 <a target="_blank" rel="noopener" href="https://github.com/openresty/lua-resty-lock">https://github.com/openresty/lua-resty-lock</a></li>
+</ul>
+<p>KONG 需关注参数:</p>
+<p>kong_db_cache  设置kong缓存大小, 用于缓存数据库数据<br>lua_max_running_timers 4096;<br>lua_max_pending_timers 16384;</p>
+<p>lua_code_cache</p>
+<p><a target="_blank" rel="noopener" href="http://cyukang.com/2017/07/22/kong-intro-4.html">http://cyukang.com/2017/07/22/kong-intro-4.html</a></p>
+<p><a target="_blank" rel="noopener" href="https://ms2008.github.io/2018/06/11/kong-events-cache/">https://ms2008.github.io/2018/06/11/kong-events-cache/</a></p>
+<p><a target="_blank" rel="noopener" href="http://cyukang.com/2017/07/22/kong-intro-4.html">http://cyukang.com/2017/07/22/kong-intro-4.html</a></p>
+<p>OpenResty-Best-Practices   最佳实践</p>
+<h1 id="如何设计可扩展的速率限制算法"><a href="#如何设计可扩展的速率限制算法" class="headerlink" title="如何设计可扩展的速率限制算法"></a>如何设计可扩展的速率限制算法</h1><p><a target="_blank" rel="noopener" href="https://konghq.com/blog/how-to-design-a-scalable-rate-limiting-algorithm/">https://konghq.com/blog/how-to-design-a-scalable-rate-limiting-algorithm/</a></p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/02/27/%E5%85%B3%E4%BA%8Etraefik%E7%BA%BF%E4%B8%8A%E9%97%AE%E9%A2%98%E8%A7%A3%E5%86%B3%E8%BF%87%E7%A8%8B/" rel="prev" title="使用TCPdump调试traefik网络连接异常">
+      <i class="fa fa-chevron-left"></i> 使用TCPdump调试traefik网络连接异常
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/02/27/ingress%E9%80%89%E5%9E%8B/" rel="next" title="K8S Ingress 方案选型">
+      K8S Ingress 方案选型 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%A6%82%E4%BD%95%E8%AE%BE%E8%AE%A1%E5%8F%AF%E6%89%A9%E5%B1%95%E7%9A%84%E9%80%9F%E7%8E%87%E9%99%90%E5%88%B6%E7%AE%97%E6%B3%95"><span class="nav-number">1.</span> <span class="nav-text">如何设计可扩展的速率限制算法</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">juneson</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">7</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">categories</span>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">juneson</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

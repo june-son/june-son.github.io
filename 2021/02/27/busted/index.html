@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"june-son.github.io","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="Kong 自行封装了一套基于Busted 的测试框架,   Busted约定将测试放在 spec 文件夹中，命名为 xx_spec.lua. 网关项目的测试代码存放路径: spec&#x2F;spec&#x2F;custom-plugins,  运行单元测试后测试框架将生成一个Kong实例并对其执行测试， 具体查阅 spec&#x2F;kong_tests.conf 配置文件。   注：Kong的单元测试依赖于测试框架 Bus">
+<meta property="og:type" content="article">
+<meta property="og:title" content="API网关kong单元测试">
+<meta property="og:url" content="https://june-son.github.io/2021/02/27/busted/index.html">
+<meta property="og:site_name" content="俊生的博客">
+<meta property="og:description" content="Kong 自行封装了一套基于Busted 的测试框架,   Busted约定将测试放在 spec 文件夹中，命名为 xx_spec.lua. 网关项目的测试代码存放路径: spec&#x2F;spec&#x2F;custom-plugins,  运行单元测试后测试框架将生成一个Kong实例并对其执行测试， 具体查阅 spec&#x2F;kong_tests.conf 配置文件。   注：Kong的单元测试依赖于测试框架 Bus">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2021-02-27T07:30:20.936Z">
+<meta property="article:modified_time" content="2021-02-27T07:30:20.936Z">
+<meta property="article:author" content="juneson">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://june-son.github.io/2021/02/27/busted/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'en'
+  };
+</script>
+
+  <title>API网关kong单元测试 | 俊生的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">俊生的博客</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>Categories</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>Archives</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="https://june-son.github.io/2021/02/27/busted/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="juneson">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="俊生的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          API网关kong单元测试
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-02-27 15:30:20" itemprop="dateCreated datePublished" datetime="2021-02-27T15:30:20+08:00">2021-02-27</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>Kong 自行封装了一套基于Busted 的测试框架,   Busted约定将测试放在 spec 文件夹中，命名为 <em>xx</em>_spec.lua.</p>
+<p>网关项目的测试代码存放路径: spec/spec/custom-plugins,  运行单元测试后测试框架将生成一个Kong实例并对其执行测试， 具体查阅 spec/kong_tests.conf 配置文件。  </p>
+<p>注：Kong的单元测试依赖于测试框架 Busted,  具体详细查看Busted介绍部分</p>
+<span id="more"></span>
+
+<p><strong>引用：</strong></p>
+<p>OpenResty提供了一个数据驱动的测试支架，用于为NGINX C模块，Lua库甚至OpenResty应用程序编写声明性测试用例<br>用于Nginx C模块和基于 Nginx / OpenResty 的库和应用程序的数据驱动测试脚手架 </p>
+<p>参考：<br><a target="_blank" rel="noopener" href="https://github.com/openresty/test-nginx">https://github.com/openresty/test-nginx</a><br><a target="_blank" rel="noopener" href="https://openresty.gitbooks.io/programming-openresty/content/testing/running-tests.html">https://openresty.gitbooks.io/programming-openresty/content/testing/running-tests.html</a></p>
+<p><strong>运行所有测试:</strong><br>cd member-api-gateway/spec， 命令行运行 :</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">.&#x2F;bin&#x2F;busted -o TAP  spec&#x2F;custom-plugins&#x2F;</span><br></pre></td></tr></table></figure>
+
+<p>执行命令后将运行custom-plugins文件夹下的 *_spec.lua 中的所有测试。   </p>
+<p><strong>运行特定插件测试</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">.&#x2F;bin&#x2F;busted -o TAP  spec&#x2F;custom-plugins&#x2F;logout(特定插件测试目录)</span><br></pre></td></tr></table></figure>
+
+<p>只需在路径后带上子目录。  其他用法例如：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cd kong&#x2F;bin&#x2F;   &amp;&amp;  busted -o gtest -v  --config-file&#x3D;..&#x2F;.busted   --exclude-tags&#x3D;flaky,ipv6,cassandra,off   </span><br></pre></td></tr></table></figure>
+
+<p>若要将测试集成到 travis ci， 需指定测试结果输出格式为TAP： </p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">.&#x2F;bin&#x2F;busted -o TAP   spec&#x2F;custom-plugins&#x2F;</span><br></pre></td></tr></table></figure>
+
+
+
+
+<h4 id="调试测试代码"><a href="#调试测试代码" class="headerlink" title="调试测试代码"></a>调试测试代码</h4><p>调试kong插件:</p>
+<p>1.在插件中直接打印错误， 例: require “pl.pretty”.dump(allow_origin_domains)<br>2.在对应插件的单元测试代码中，暂停代码执行. 例：os.execute(“sleep 1000”)<br>3.进入测试框架生成的kong运行实例的目录中， 查看错误日志.  实例运行目录在 member-api-gateway/spec/spec/kong_test.conf 中的 prefix 配置项定义.<br>    vim  prefix 路径/logs/error.log 查看插件输出信息.</p>
+<h4 id="测试代码说明"><a href="#测试代码说明" class="headerlink" title="测试代码说明"></a>测试代码说明</h4><h6 id="数据库对象"><a href="#数据库对象" class="headerlink" title="数据库对象"></a>数据库对象</h6><p>bp 的对象是在spec/fixtures/blueprints.lua 中的_M.new(db) 进行定义, 这里定义后， 用于在插入数据时给出默认值，如:自增数据</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">local bp, db &#x3D; helpers.get_db_utils(strategy, &#123;</span><br><span class="line">                &#39;routes&#39;,</span><br><span class="line">                &#39;services&#39;,</span><br><span class="line">                &#39;plugins&#39;,</span><br><span class="line">                &#39;app_config&#39;,    --这里指定要清空数据的表</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<p>db.app_config 对象必须要加载插件request-check 才能访问到, 因为daos.lua文件定义了app_config对象, 通过 </p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">helpers.start_kong(&#123;    plugins &#x3D; &#39;bundled,request-check&#39; &#125;))</span><br></pre></td></tr></table></figure>
+
+<p> 加载插件表对象</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">db.plugins:load_plugin_schemas(conf.loaded_plugins)</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>启动测试用kong实例</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">assert(helpers.start_kong(&#123;</span><br><span class="line">          database   &#x3D; strategy,</span><br><span class="line">          nginx_conf &#x3D; &quot;spec&#x2F;fixtures&#x2F;custom_nginx.template&quot;,</span><br><span class="line">&#125;))</span><br></pre></td></tr></table></figure>
+
+
+
+
+
+<h3 id="mock-外部接口"><a href="#mock-外部接口" class="headerlink" title="mock 外部接口"></a>mock 外部接口</h3><p>spec/helpers.lua 文件中定义了 mock_upstream_url 地址， 通过这个地址访问mock url.</p>
+<p>需要mocker的url， 需到spec/fixtures/custom_nginx.template文件中的定义行为</p>
+<p>server {<br>        server_name mock_upstream;</p>
+<p>​        ….</p>
+<pre><code>   location = /你要mock的url &#123;
+        content_by_lua_block &#123;
+            local mu = require &quot;spec.fixtures.mock_upstream&quot;
+            ...
+            你自定义的mock 返回数据
+            return mu.send_default_json_response(&#123;
+                delay = delay_seconds,
+            &#125;)
+        &#125;
+    &#125;
+</code></pre>
+<p>}</p>
+<p>–        before_each(function()<br>–            helpers.kill_all()<br>–            assert(db:truncate())<br>–            local service2 = bp.services:insert()<br>–            assert(helpers.start_kong({<br>–              database   = strategy,<br>–              nginx_conf = “spec/fixtures/custom_nginx.template”,<br>–            }))<br>–        end)<br>–    assert(helpers.start_kong({<br>–              database   = strategy,<br>–              nginx_conf = “spec/fixtures/custom_nginx.template”,<br>–            }))<br>–        db:truncate(“plugins”)<br>–        assert(db:truncate())<br>–        db:reset()<br>–        os.execute(“sleep 1000”)<br>–        assert 返回 Failure<br>–        error(err, 2) 返回 Error<br>–        assert.is_true(json.code == 0)<br>–        assert.falsy(err)<br>–        assert.truthy(body.headers[‘authorization’])<br>–        assert.are.same(6, tonumber(res.headers[“x-ratelimit-limit-minute”]))<br>–        assert.same({ message = “API rate limit exceeded” }, json)<br>–        assert.equal(0, body.code)<br>–        assert.not_equal(headers[‘access-token’], res.headers[‘access-token’])<br>–        local row, err = db.plugins:select({id = plugin.id}, { nulls = true })</p>
+<p>–        local res = assert(admin_client:send {<br>        –            method  = “GET”,<br>        –            path    = “/plugins”,<br>        –            headers = {<br>        –              [“Content-Type”] = “application/json”<br>        –            }<br>        –        })<br>        –        local body, err = res:read_body()<br>        –        dump(body)</p>
+<h2 id="Busted介绍"><a href="#Busted介绍" class="headerlink" title="Busted介绍"></a>Busted介绍</h2><p>Busted 是一个 BDD 行为驱动开发测试框架.   《BDD in action》这本书详细讲解行为驱动开发， 属于敏捷开发工程方法范畴。</p>
+<p>kong 官方的单元测试示例:<a target="_blank" rel="noopener" href="https://discuss.konghq.com/t/kong-testing-framework/689/2">https://discuss.konghq.com/t/kong-testing-framework/689/2</a></p>
+<p>busted 框架文档 <a target="_blank" rel="noopener" href="http://olivinelabs.com/busted/#spies-mocks-stubs">http://olivinelabs.com/busted/#spies-mocks-stubs</a></p>
+<h2 id="安装"><a href="#安装" class="headerlink" title="安装"></a>安装</h2><p>安装前需要注意:</p>
+<blockquote>
+<p>busted works with lua &gt;= 5.1, moonscript, terra, and LuaJIT &gt;= 2.0.0.</p>
+</blockquote>
+<p>即Lua版本必须&gt;=5.1, LuaJIT &gt;= 2.0.0</p>
+<p>首先要通过 luarocks 安装 busted 框架，执行如下命令：</p>
+<p>luarocks install busted</p>
+<p>备注：如需要运行异步测试， 则需安装如下依赖</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">apt-get install libev-dev, git</span><br><span class="line">luarocks install copas</span><br><span class="line">luarocks install lua-ev scm --server&#x3D;http:&#x2F;&#x2F;luarocks.org&#x2F;repositories&#x2F;rocks-scm&#x2F;</span><br><span class="line">luarocks install moonscript</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>然后重新安装和运行测试</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">luarocks remove busted --force</span><br><span class="line">luarocks make</span><br><span class="line">busted spec</span><br></pre></td></tr></table></figure>
+
+
+
+<p>命令行执行：busted</p>
+<p>出现如下信息代表安装成功：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">0 successes &#x2F; 0 failures &#x2F; 2 errors &#x2F; 0 pending : 0.000012 seconds</span><br></pre></td></tr></table></figure>
+
+<p>然后再使用框架执行单元测试test.lua文件：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">busted test.lua</span><br></pre></td></tr></table></figure>
+
+
+
+
+
+<h2 id="task-任务和预定义配置"><a href="#task-任务和预定义配置" class="headerlink" title="task 任务和预定义配置"></a>task 任务和预定义配置</h2><p>Busted 1.6  添加了任务概念和预定义配置。</p>
+<p>任务: 如项目下存在 .busted文件, 则会自动加载.busted定义的任务.<br>预定义配置: Busted –config-file=FILE 使用–config-file 加载配置文件将会覆盖掉根目录下的 .busted 文件 </p>
+<h4 id="任务"><a href="#任务" class="headerlink" title="任务:"></a>任务:</h4><p>​    在项目根目录下创建 .busted 文件， 运行 busted 时如果存在此文件会自动加载它， .busted文件格式如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">return &#123;</span><br><span class="line">  -- 这个key会被所有task继承, 这里指定所有task都进行覆盖率分析, coverage 是 Busted 可执行文件的参数, 你可以添加 busted --help 列出的参数</span><br><span class="line">  _all &#x3D; &#123;</span><br><span class="line">    coverage &#x3D; true</span><br><span class="line">  &#125;,</span><br><span class="line"></span><br><span class="line">  -- 未指定任务，则运行default选项， verbose 是 Busted 可执行文件的参数</span><br><span class="line">  default &#x3D; &#123;</span><br><span class="line">    verbose &#x3D; true</span><br><span class="line">  &#125;,</span><br><span class="line"></span><br><span class="line">  -- 任务项</span><br><span class="line">  apiUnit &#x3D; &#123;</span><br><span class="line">    tags &#x3D; &quot;api&quot;,</span><br><span class="line">    ROOT &#x3D; &#123;&quot;spec&#x2F;unit&quot;&#125;,</span><br><span class="line">    verbose &#x3D; true</span><br><span class="line">  &#125;</span><br><span class="line">&#125; </span><br></pre></td></tr></table></figure>
+
+<p>创建 .busted 文件并指定配置后,  运行 <code>busted --run=apiUnit</code>,  即可跑apiUnit测试项.   实际跑运行命令： <code>busted --coverage --tags=api --verbose spec/unit</code></p>
+<p>如果直接运行 busted, 实际跑运行命令： <code>busted --coverage --verbose</code></p>
+<h4 id="预定义配置"><a href="#预定义配置" class="headerlink" title="预定义配置:"></a>预定义配置:</h4><p>​    Busted –config-file=FILE 使用–config-file加载配置文件将会覆盖掉根目录下的 .busted 文件配置</p>
+<h2 id="运行方式"><a href="#运行方式" class="headerlink" title="运行方式"></a>运行方式</h2><h4 id="1-独立运行"><a href="#1-独立运行" class="headerlink" title="1.独立运行"></a>1.独立运行</h4><p>​            在 test.lua 文件的头部添加 <code>require &#39;busted.runner&#39;()</code> ，  它就变成可独立运行的测试，可直接 lua test.lua  运行测试用例.</p>
+<p>​             独立运行方式仍可使用  busted –help 列出的参数， 如：<code>lua test.lua -t &quot;tag&quot; --verbose</code></p>
+<h4 id="2-busted执行器运行"><a href="#2-busted执行器运行" class="headerlink" title="2.busted执行器运行"></a>2.busted执行器运行</h4><p>​            busted test.lua</p>
+<h2 id="定义测试用例"><a href="#定义测试用例" class="headerlink" title="定义测试用例"></a>定义测试用例</h2><p>​    测试用例由 describe 和 it 块组成，describe(别名：context) 可以嵌套多层.  函数before_each, after_each运行在嵌套测试块之前和之后， 函数setup, teardown 运行在describe块之前和之后.</p>
+<p>​    函数pending 用于留下占位符, 以便稍后编写测试代码,  #hashtags 给指定测试打标记。 以便用命令行运行时，通过 -t 选项来运行指定标记测试。 多个标记用逗号分隔。</p>
+<h4 id="describe-Context-blocks"><a href="#describe-Context-blocks" class="headerlink" title="describe:Context blocks"></a>describe:Context blocks</h4><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">describe(&quot;a test&quot;, function()</span><br><span class="line">  -- tests go here</span><br><span class="line"></span><br><span class="line">  describe(&quot;a nested block&quot;, function()</span><br><span class="line">    describe(&quot;can have many describes&quot;, function()</span><br><span class="line">      -- tests</span><br><span class="line">    end)</span><br><span class="line">  end)</span><br><span class="line"></span><br><span class="line">  -- more tests pertaining to the top level</span><br><span class="line">end)</span><br></pre></td></tr></table></figure>
+
+<h4 id="insulate-expose"><a href="#insulate-expose" class="headerlink" title="insulate,  expose:"></a>insulate,  expose:</h4><p>​        这两个指令是 describe 的别名 ， 用于控制 busted 执行的context块的沙箱级别.  insulate 块隔离测试环境, expose 块将测试环境暴露给外部上下文块.  </p>
+<p>​                默认情况下， 每个测试文件运行在一个相互隔离的块中， 可以使用 –no-auto-insulate 来禁止这个特性.</p>
+<p>​        测试环境隔离块中的 lua 全局表 _G, 还有require加载模块缓存变量 package.loaded, 在离开insulate块后， 将还原它们到最初的状态， 因此，其它 describe 块都无法访问 insulate 块中的变量</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">insulate(&quot;an insulated test&quot;, function()</span><br><span class="line">  require(&quot;mymodule&quot;)</span><br><span class="line">  _G.myglobal &#x3D; true</span><br><span class="line"></span><br><span class="line">  -- tests go here</span><br><span class="line"></span><br><span class="line">  describe(&quot;a nested block&quot;, function()</span><br><span class="line">    describe(&quot;can have many describes&quot;, function()</span><br><span class="line">      -- tests</span><br><span class="line">    end)</span><br><span class="line">  end)</span><br><span class="line"></span><br><span class="line">  -- more tests pertaining to the top level</span><br><span class="line">end)</span><br><span class="line"></span><br><span class="line">describe(&quot;a test&quot;, function()</span><br><span class="line">  it(&quot;tests insulate block does not update environment&quot;, function()</span><br><span class="line">    assert.is_nil(package.loaded.mymodule)  -- mymodule is not loaded</span><br><span class="line">    assert.is_nil(_G.myglobal)  -- _G.myglobal is not set</span><br><span class="line">    assert.is_nil(myglobal)</span><br><span class="line">  end)</span><br><span class="line"></span><br><span class="line">  -- tests go here</span><br><span class="line">end)</span><br></pre></td></tr></table></figure>
+
+<p>​        expose块会导出全局表_G和package.loaded的更改到后续的上下文块中(describe 块)。另外，expose 块内创建的任何全局变量，都是在 context block 2 level 之外的环境创建的，在文件头部使用expose 块，将提升require和global的级别到root环境,  这些变量将扩散到后续的测试文件中。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">-- test1_spec.lua</span><br><span class="line">expose(&quot;an exposed test&quot;, function()</span><br><span class="line">  require(&quot;mymodule&quot;)</span><br><span class="line">  _G.myglobal &#x3D; true</span><br><span class="line"></span><br><span class="line">  -- tests can go here</span><br><span class="line"></span><br><span class="line">  describe(&quot;a nested block&quot;, function()</span><br><span class="line">    describe(&quot;can have many describes&quot;, function()</span><br><span class="line">      -- tests</span><br><span class="line">    end)</span><br><span class="line">  end)</span><br><span class="line"></span><br><span class="line">  -- more tests pertaining to the top level</span><br><span class="line">end)</span><br><span class="line"></span><br><span class="line">describe(&quot;a test in same file&quot;, function()</span><br><span class="line">  it(&quot;tests expose block updates environment&quot;, function()</span><br><span class="line">    assert.is_truthy(package.loaded.mymodule) -- mymodule is still loaded</span><br><span class="line">    assert.is_true(_G.myglobal) -- _G.myglobal is still set</span><br><span class="line">    assert.is_equal(myglobal)</span><br><span class="line">  end)</span><br><span class="line"></span><br><span class="line">  -- tests go here</span><br><span class="line">end)</span><br></pre></td></tr></table></figure>
+
+<p>​        </p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">-- test2_spec.lua</span><br><span class="line">describe(&quot;a test in separate file&quot;, function()</span><br><span class="line">  it(&quot;tests expose block updates environment&quot;, function()</span><br><span class="line">    assert.is_truthy(package.loaded.mymodule) -- mymodule is still loaded</span><br><span class="line">    assert.is_true(_G.myglobal)               -- _G.myglobal is still set</span><br><span class="line">    assert.is_equal(_G.myglobal, myglobal)</span><br><span class="line">  end)</span><br><span class="line"></span><br><span class="line">  -- tests go here</span><br><span class="line">end)</span><br></pre></td></tr></table></figure>
+
+<p>​    </p>
+<h4 id="Tagging-Tests"><a href="#Tagging-Tests" class="headerlink" title="Tagging Tests"></a>Tagging Tests</h4><p>​        用#tags对测试用例进行标记，运行测试用 -t 运行指定用例</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">describe(&quot;a test #tag_1&quot;, function()</span><br><span class="line">  -- tests go here</span><br><span class="line">end)</span><br><span class="line"></span><br><span class="line">describe(&quot;a nested block #another&quot;, function()</span><br><span class="line">  describe(&quot;can have many describes&quot;, function()</span><br><span class="line">    -- tests</span><br><span class="line">  end)</span><br><span class="line"></span><br><span class="line">  -- more tests pertaining to the top level</span><br><span class="line">end)</span><br><span class="line"></span><br><span class="line">busted -t &quot;tag_1&quot; .&#x2F;test.lua</span><br></pre></td></tr></table></figure>
+
+<p>​        <strong>–exclude-tags</strong> 选项用于排除指定测试用例， 例如：<code>busted --exclude-tags=&quot;another&quot; ./test.lua</code></p>
+<p>​        -t， –tags，–exclude-tags 一起使用时，  –exclude-tags 优先级最高.</p>
+<h4 id="Randomizing-Tests"><a href="#Randomizing-Tests" class="headerlink" title="Randomizing Tests"></a>Randomizing Tests</h4><p>​        调用 randomize() 使测试随机化</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">describe(&quot;a ramdomized test&quot;, function()</span><br><span class="line">  randomize()</span><br><span class="line"></span><br><span class="line">  it(&quot;runs a test&quot;, function() end)</span><br><span class="line">  it(&quot;runs another test&quot;, function() end)</span><br><span class="line">end)</span><br></pre></td></tr></table></figure>
+
+<p>​        –shuffle 选项使所有测试用例随机运行， 则可以通过 randomize(false)  使得指定的用例的不进行随机化, 即每次都运行.</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">describe(&quot;a non-randomized test&quot;, function()</span><br><span class="line">  randomize(false)</span><br><span class="line"></span><br><span class="line">  it(&quot;runs a test&quot;, function() end)</span><br><span class="line">  it(&quot;runs another test&quot;, function() end)</span><br><span class="line">end)</span><br></pre></td></tr></table></figure>
+<h4 id="It"><a href="#It" class="headerlink" title="It"></a>It</h4><p>​        describe 用于定义上下文块Context blocks， it 用于定义测试, 如果it块中的 assert functions 测试未通过将抛出错误,  assert 也可以用 spec,  test 等别名替代        </p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">describe(&quot;busted&quot;, function()</span><br><span class="line">  it(&quot;has tests&quot;, function()</span><br><span class="line">    local obj1 &#x3D; &#123; test &#x3D; &quot;yes&quot; &#125;</span><br><span class="line">    local obj2 &#x3D; &#123; test &#x3D; &quot;yes&quot; &#125;</span><br><span class="line">    assert.same(obj1, obj2)</span><br><span class="line">  end)</span><br><span class="line">end)</span><br></pre></td></tr></table></figure>
+
+
+
+<h4 id="before-each-after-each-setup-teardown"><a href="#before-each-after-each-setup-teardown" class="headerlink" title="before_each, after_each, setup, teardown"></a>before_each, after_each, setup, teardown</h4><p>​        before_each在每次子测试(it 块)之前运行，after_each则在之后运行。 </p>
+<p>​                setup在describe块中最先运行，teardown在describe块中最后运行。</p>
+<p>​        setup, teardown 有两种模式， lazy(懒惰) 或者 strict(严格),</p>
+<p>​                只有当前或嵌套的 describe 块中至少存在一个子测试时, 才会运行lazy_setup和lazy_teardown.</p>
+<p>​                strict_setup和strict_teardown 总是在describe块中运行, 即使没有子测试.</p>
+<p>​        默认，setup和teardown是strict模式，但可以用 –lazy 选项改变位懒惰模式</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line">describe(&quot;busted&quot;, function()</span><br><span class="line">  local obj1, obj2</span><br><span class="line">  local util</span><br><span class="line"></span><br><span class="line">  setup(function()</span><br><span class="line">    util &#x3D; require(&quot;util&quot;)</span><br><span class="line">  end)</span><br><span class="line"></span><br><span class="line">  teardown(function()</span><br><span class="line">    util &#x3D; nil</span><br><span class="line">  end)</span><br><span class="line"></span><br><span class="line">  before_each(function()</span><br><span class="line">    obj1 &#x3D; &#123; test &#x3D; &quot;yes&quot; &#125;</span><br><span class="line">    obj2 &#x3D; &#123; test &#x3D; &quot;yes&quot; &#125;</span><br><span class="line">  end)</span><br><span class="line"></span><br><span class="line">  it(&quot;sets up vars with the before_each&quot;, function()</span><br><span class="line">    obj2 &#x3D; &#123; test &#x3D; &quot;no&quot; &#125;</span><br><span class="line">    assert.are_not.same(obj1, obj2)</span><br><span class="line">  end)</span><br><span class="line"></span><br><span class="line">  it(&quot;sets up vars with the before_each&quot;, function()</span><br><span class="line">    -- obj2 is reset thanks to the before_each</span><br><span class="line">    assert.same(obj1, obj2)</span><br><span class="line">  end)</span><br><span class="line"></span><br><span class="line">  describe(&quot;nested&quot;, function()</span><br><span class="line">    it(&quot;also runs the before_each here&quot;, function()</span><br><span class="line">      -- if this describe also had a before_each, it would run</span><br><span class="line">      -- both, starting with the parents&#39;. You can go n-deep.</span><br><span class="line">    end)</span><br><span class="line">  end)</span><br><span class="line">end)</span><br></pre></td></tr></table></figure>
+
+<h4 id="finally"><a href="#finally" class="headerlink" title="finally"></a>finally</h4><pre><code>    作为更轻的替代方案，避免设置upvalues
+    it(&#39;checks file contents&#39;,function()
+      local f = io.popen(&#39;stupid_process&#39;)
+
+      -- ensure that once test has finished f:close() is called
+      -- independent of test outcome
+      -- 确保一旦测试完成就调用f:close,  独立于测试结果
+      finally(function() f:close() end)
+
+      -- do things with f
+    end)
+
+
+  
+</code></pre>
+<h4 id="Pending"><a href="#Pending" class="headerlink" title="Pending"></a>Pending</h4><p>​        计划稍后编写（或修复）的测试的占位符</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">describe(&quot;busted pending tests&quot;, function()</span><br><span class="line">  pending(&quot;I should finish this test later&quot;)</span><br><span class="line">end)</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="Asserts-断言"><a href="#Asserts-断言" class="headerlink" title="Asserts 断言"></a>Asserts 断言</h2><p>​    它是busted的核心，是用来实际编写测试的东西.   Busted使用luassert库来提供断言。 </p>
+<p>​    注意，一些断言/修饰符是Lua关键字（true，false，nil，function和not）,  不能使用 ‘.’ 来使用它们，因为这会导致编译错误。 可以使用’_’(下划线)或首字母大写来使用。</p>
+<p>​        示例：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">assert.is_true(json.code &#x3D;&#x3D; 0)</span><br><span class="line">assert.falsy(err)</span><br><span class="line">assert.truthy(body.headers[&#39;authorization&#39;])</span><br><span class="line">assert.are.same(6, tonumber(res.headers[&quot;x-ratelimit-limit-minute&quot;]))</span><br><span class="line">assert.same(&#123; message &#x3D; &quot;API rate limit exceeded&quot; &#125;, json)</span><br><span class="line">assert.equal(0, body.code)</span><br><span class="line">assert.not_equal(headers[&#39;access-token&#39;], res.headers[&#39;access-token&#39;])</span><br></pre></td></tr></table></figure>
+
+<p>  详情参考：<a target="_blank" rel="noopener" href="https://olivinelabs.com/busted/#asserts">https://olivinelabs.com/busted/#asserts</a></p>
+<h2 id="MOCK"><a href="#MOCK" class="headerlink" title="MOCK"></a>MOCK</h2><p>项目代码往往有很多依赖，各种调用将各个模块连接耦合起来。在设计不佳的系统中甚至可能为了测试一个模块而初始化所有模块. 针对这种情况，使用 mock 可以解决一部分问题.<br>Mock 就是一个真实模块的替代品。可以类比于演员的替身来理解。它与真实模块有相同的接口，但是接口返回值是我们直接指定的特定值，这样就达成了其他模块改变时我们测试的这个模块获得的返回值依然是固定的，也就达成了与其他模块隔离及解耦的目的。</p>
+<p>通过 Mock 的使用，我们还可以监测对一个模块的调用行为，可以通过 Mock 来统计调用次数，也能知道调用时传入的参数。</p>
+<p>Busted 的 Mock 主要提供了调用次数统计、调用时传入参数的获取的功能。但是没有起到让我们指定返回值的作用。在 NUnit 中的 Mock 通常是自行实现一个与真实模块具有相同接口（interface）的类，然后进行使用。在 NUnit 中，Mock 更多地是一种概念而不是实际接口；在 Busted 中则提供了实际的 mock 函数，但是仅仅是有一些监测功能。但是核心问题在于，测试的函数可能依赖多个模块，要调用其他模块的函数、取其中的值。Lua busted 的 Mock 并不能满足需求，所以替代真实模块、隔离系统其他模块的任务，还是需要我们根据实际情况来手工解决。</p>
+<h4 id="busted-提供的调用统计的方法"><a href="#busted-提供的调用统计的方法" class="headerlink" title="busted 提供的调用统计的方法"></a>busted 提供的调用统计的方法</h4><p>​    在 busted 中，进行参数和调用统计的 Mock 分为 spy 和 stub 两种。<br>​    spy 对目标进行监测，可以监测其是否被调用、被用什么函数调用。<br>​    stub 则是对目标进行包装，同样监测其是否被调用、被用什么函数调用。与 spy 不同之处是，stub 会截取调用，不会实际调用目标。适合测试数据层，这样不会实际找数据库要数据。<br>​    spy 和 stub 是单体操作，mock 是对整个表进行的操作，mock(t) 得到 t 的 spies, mock(t, true) 得到 t 的 stubs</p>
+<h4 id="模块隔离-替代的办法"><a href="#模块隔离-替代的办法" class="headerlink" title="模块隔离/替代的办法"></a>模块隔离/替代的办法</h4><p>​    解决全局变量、require 的隔离. </p>
+<p>​    全局量</p>
+<p>​        如果待测试的代码使用了全局变量 <code>GLOBAL</code>，那么使用 stub:  stub(_G, “GLOBAL”)</p>
+<p>​    require</p>
+<p>​        使用 lua 的 package 机制来改变 require.</p>
+<p>​        如果要导入 <code>src/logic/sample_module.lua</code> 这个包，即<code>require(&quot;src/logic/sample_module&quot;)</code>，则使用：</p>
+<pre><code>    package.preload[&quot;src/logic/sample_module&quot;] = function ()
+</code></pre>
+<p>​        –print(“fake load module”)<br>​    end</p>
+<p>​    这样在 require 这一模块时，不会去加载实际的文件，而是运行这里定义函数。在这里面就可以提供我们自己的 Mock 了</p>
+<p>Busted 支持给测试打标签，这样方便独立运行具有某些 tag 或者不具有某些 tag 的测试</p>
+<p>使用方法：</p>
+<ul>
+<li>只测有该标签的测试：<code>busted -o TAP --tags=InternalVariableUsed</code></li>
+<li>排除有该标签的测试：<code>busted -o TAP --exclude-tags=InternalVariableUsed</code></li>
+</ul>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><p>OpenResty提供了一个数据驱动的测试支架，用于为NGINX C模块，Lua库甚至OpenResty应用程序编写声明性测试用例<br>Test :: Nginx - 用于Nginx C模块和基于Nginx / OpenResty的库和应用程序的数据驱动测试脚手架<br>参考：<br><a target="_blank" rel="noopener" href="https://github.com/openresty/test-nginx">https://github.com/openresty/test-nginx</a><br><a target="_blank" rel="noopener" href="https://openresty.gitbooks.io/programming-openresty/content/testing/running-tests.html">https://openresty.gitbooks.io/programming-openresty/content/testing/running-tests.html</a></p>
+<p>参考链接：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="http://olivinelabs.com/busted/">busted - Elegant Lua unit testing.</a></li>
+<li><a target="_blank" rel="noopener" href="https://github.com/Olivine-Labs/busted">busted - GITHUB</a></li>
+<li><a target="_blank" rel="noopener" href="https://docs.konghq.com/1.0.x/plugin-development/tests/">kong - Plugin Development - Writing tests</a></li>
+<li><a target="_blank" rel="noopener" href="https://segmentfault.com/a/1190000007178147">OpenResty单元测试实践</a></li>
+<li><a target="_blank" rel="noopener" href="http://lua-users.org/wiki/UnitTesting">Lua Unit Testing</a></li>
+<li><a target="_blank" rel="noopener" href="https://moonbingbing.gitbooks.io/openresty-best-practices/test/unittest.html">openresty 最佳实践 - 测试</a></li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/02/27/%E6%95%B0%E6%8D%AE%E5%90%8C%E6%AD%A5%E5%B7%A5%E5%85%B7%E8%B0%83%E7%A0%94/" rel="prev" title="调研数据同步ETL⼯具">
+      <i class="fa fa-chevron-left"></i> 调研数据同步ETL⼯具
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/02/27/%E7%BD%91%E5%85%B3%E6%80%A7%E8%83%BD%E6%B5%8B%E8%AF%95%E5%8F%8A%E9%97%AE%E9%A2%98%E5%A4%84%E7%90%86/" rel="next" title="kong网关压力测试">
+      kong网关压力测试 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%B0%83%E8%AF%95%E6%B5%8B%E8%AF%95%E4%BB%A3%E7%A0%81"><span class="nav-number">1.</span> <span class="nav-text">调试测试代码</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%B5%8B%E8%AF%95%E4%BB%A3%E7%A0%81%E8%AF%B4%E6%98%8E"><span class="nav-number">2.</span> <span class="nav-text">测试代码说明</span></a><ol class="nav-child"><li class="nav-item nav-level-6"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E5%BA%93%E5%AF%B9%E8%B1%A1"><span class="nav-number">2.0.1.</span> <span class="nav-text">数据库对象</span></a></li></ol></li></ol></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#mock-%E5%A4%96%E9%83%A8%E6%8E%A5%E5%8F%A3"><span class="nav-number"></span> <span class="nav-text">mock 外部接口</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Busted%E4%BB%8B%E7%BB%8D"><span class="nav-number"></span> <span class="nav-text">Busted介绍</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%89%E8%A3%85"><span class="nav-number"></span> <span class="nav-text">安装</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#task-%E4%BB%BB%E5%8A%A1%E5%92%8C%E9%A2%84%E5%AE%9A%E4%B9%89%E9%85%8D%E7%BD%AE"><span class="nav-number"></span> <span class="nav-text">task 任务和预定义配置</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E4%BB%BB%E5%8A%A1"><span class="nav-number">1.</span> <span class="nav-text">任务:</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%A2%84%E5%AE%9A%E4%B9%89%E9%85%8D%E7%BD%AE"><span class="nav-number">2.</span> <span class="nav-text">预定义配置:</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%BF%90%E8%A1%8C%E6%96%B9%E5%BC%8F"><span class="nav-number"></span> <span class="nav-text">运行方式</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-%E7%8B%AC%E7%AB%8B%E8%BF%90%E8%A1%8C"><span class="nav-number">1.</span> <span class="nav-text">1.独立运行</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-busted%E6%89%A7%E8%A1%8C%E5%99%A8%E8%BF%90%E8%A1%8C"><span class="nav-number">2.</span> <span class="nav-text">2.busted执行器运行</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9A%E4%B9%89%E6%B5%8B%E8%AF%95%E7%94%A8%E4%BE%8B"><span class="nav-number"></span> <span class="nav-text">定义测试用例</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#describe-Context-blocks"><span class="nav-number">1.</span> <span class="nav-text">describe:Context blocks</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#insulate-expose"><span class="nav-number">2.</span> <span class="nav-text">insulate,  expose:</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Tagging-Tests"><span class="nav-number">3.</span> <span class="nav-text">Tagging Tests</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Randomizing-Tests"><span class="nav-number">4.</span> <span class="nav-text">Randomizing Tests</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#It"><span class="nav-number">5.</span> <span class="nav-text">It</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#before-each-after-each-setup-teardown"><span class="nav-number">6.</span> <span class="nav-text">before_each, after_each, setup, teardown</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#finally"><span class="nav-number">7.</span> <span class="nav-text">finally</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Pending"><span class="nav-number">8.</span> <span class="nav-text">Pending</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Asserts-%E6%96%AD%E8%A8%80"><span class="nav-number"></span> <span class="nav-text">Asserts 断言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#MOCK"><span class="nav-number"></span> <span class="nav-text">MOCK</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#busted-%E6%8F%90%E4%BE%9B%E7%9A%84%E8%B0%83%E7%94%A8%E7%BB%9F%E8%AE%A1%E7%9A%84%E6%96%B9%E6%B3%95"><span class="nav-number">1.</span> <span class="nav-text">busted 提供的调用统计的方法</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%A8%A1%E5%9D%97%E9%9A%94%E7%A6%BB-%E6%9B%BF%E4%BB%A3%E7%9A%84%E5%8A%9E%E6%B3%95"><span class="nav-number">2.</span> <span class="nav-text">模块隔离&#x2F;替代的办法</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99"><span class="nav-number"></span> <span class="nav-text">参考资料</span></a></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">juneson</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">7</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">categories</span>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">juneson</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

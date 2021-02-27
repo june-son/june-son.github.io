@@ -1,0 +1,882 @@
+<?xml version="1.0" encoding="utf-8"?>
+<search>
+  <entry>
+    <title>国际化(i18n)和本地化(i10n)工具GNU gettext</title>
+    <url>/2021/02/27/gnu%20gettext/</url>
+    <content><![CDATA[<!--**简体：**-->
+
+<!--zh-Hans-CN-->
+
+<!--zh-Hans-->
+
+<!--zh-CN-->
+<!--**繁体：**-->
+
+<!--zh-Hant-HK-->
+
+<!--zh-Hant-->
+
+<!--zh-HK-->
+<!--**英文：**-->
+<!--en-->
+<!--前端/客户端的 jwt 中的 `language` 字段可以以上述几种字符串为标准传入，网关会统一做转换后再传入后端, 英文就是 en, 简体统一转换为zh-Hans-CN, 繁体统一转换为zh-Hant-HK。-->
+<!--目前就只支持到此三种语言，如果后期有增加语言，则在基于此标准上扩展。-->
+
+
+<p>GNU gettext,   它是一套国际化(i18n)和本地化(i10n)工具，在类Unix系统中被大量采用,  ubuntu , wordpress 都采用 gettext 实现多语言支持。 国际化标准 <a href="https://zh.wikipedia.org/wiki/ISO_639-1">ISO 639-1</a></p>
+<p>使用GNU text 的好处是， 它可以自动扫描提取源文件的待翻译内容， 源文件新增的待翻译片段也可以自动扫描提取。 </p>
+<span id="more"></span>
+
+<p>参考:<br><a href="https://zh.wikipedia.org/wiki/Gettext">https://zh.wikipedia.org/wiki/Gettext</a><br><a href="https://www.cnblogs.com/linux-wang/p/9001368.html">https://www.cnblogs.com/linux-wang/p/9001368.html</a><br><a href="https://www.atjiang.com/gnu-gettext-intro/">https://www.atjiang.com/gnu-gettext-intro/</a></p>
+<p>gettext 是一套工具集的名称。这套工具集包含 xgettext/msginit/msgfmt 等一套建立模版(POT)、创建PO文件和编译MO文件的工具。</p>
+<p>工作流程是这样的：</p>
+<ol>
+<li>在源码中使用约定的语法来书写字符串，如 <code>gettext(&quot;my text&quot;)</code>。也可用 <code>_(&quot;my text&quot;)</code> ；</li>
+<li>使用 xgettext 从源码中扫描出需要翻译的文本，建立 POT 文件；</li>
+<li>使用 msginit 命令根据 POT 文件建立 PO 文件。或者直接在上一步也可以直接建立 PO 文件；</li>
+<li>进行人工翻译，翻译的结果保存在 PO 文件中；</li>
+<li>使用 msgfmt 命令将 PO 文件编译成面向机器的 MO 文件(二进制文件)；</li>
+<li>在程序中实现调用命令，本项目中是 <code>_()</code> 函数，这个函数将读取并解析 MO 文件，根据调用的原始语言文本返回翻译之后的文本。  </li>
+</ol>
+<p>PO 是 Portable Object (可移植对象)的缩写形式；</p>
+<p>MO 是 Machine Object (机器对象) 的缩写形式。</p>
+<p>PO 文件是面向翻译人员的、提取于源代码的一种资源文件。当软件升级的时候，通过使用 gettext 软件包处理 PO 文件，可以在一定程度上使翻译成果得以继承，减轻翻译人员的负担。</p>
+<p>MO 文件是面向计算机的、由 PO 文件通过 gettext 软件包编译而成的二进制文件。程序通过读取 MO 文件使自身的界面转换成用户使用的语言。</p>
+<p>目前,  C、Python、Java、Perl、PHP等多数编程语言对其提供了支持。 为了减少输入量和代码量，此功能通常以标记别名“<em>”的形式使用，所以例如以下C语言代码：</em></p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">printf(_(&quot;My name is %s.\n&quot;), my_name);  </span><br></pre></td></tr></table></figure>
+
+
+
+<h6 id="xgettext程序从源代码扫描提取待翻译片段生成-po文件，作为源代码中需翻译内容。一个典型的-po文件条目应当是这样的："><a href="#xgettext程序从源代码扫描提取待翻译片段生成-po文件，作为源代码中需翻译内容。一个典型的-po文件条目应当是这样的：" class="headerlink" title="xgettext程序从源代码扫描提取待翻译片段生成.po文件，作为源代码中需翻译内容。一个典型的.po文件条目应当是这样的："></a>xgettext程序从源代码扫描提取待翻译片段生成.po文件，作为源代码中需翻译内容。一个典型的.po文件条目应当是这样的：</h6><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">#: src&#x2F;name.c:36</span><br><span class="line"></span><br><span class="line">msgid &quot;My name is %s.\n&quot;</span><br><span class="line"></span><br><span class="line">msgstr &quot;我的名字是 %s.\n&quot; </span><br></pre></td></tr></table></figure>
+
+<p>这种纯文本文件方便翻译人员进行翻译。 </p>
+<p><br><br></p>
+<h2 id="Poedit-简介"><a href="#Poedit-简介" class="headerlink" title="Poedit 简介"></a><strong>Poedit 简介</strong></h2><p>gettext 提供的工具集都是基于命令行的，它没有提供用于翻译工作者的对照翻译工具。</p>
+<p><a href="http://www.poedit.net/">Poedit</a> 是一个基于gettext工具集的图形化工具,  它从源码中提取文本生成 PO 文件，并提供了一个GUI界面用于对照翻译。</p>
+<p>它还可以直接生成最终的 MO 文件,  在GUI背后依然是使用 gettext 来处理的，但这些具体的细节被隐藏了。  </p>
+<p>安装工具：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">​apt-get install poedit    </span><br></pre></td></tr></table></figure>
+
+
+
+<p>配置:</p>
+<p>开启 Poedit，点击 编辑 - 首选项.</p>
+<ol>
+<li><p>在”常规”选项卡,   填入自己的个人信息, 勾选“在保存时自动编译MO文件”,  “检查拼写”</p>
+</li>
+<li><p>切换到 “提取器” 选项卡，这里提供了几种源码解析器，但默认没有Lua。我们加入Lua源码解析。    </p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">点击 New 新建一个源码解析器.  设置如下：</span><br><span class="line"></span><br><span class="line">​	语言：Lua</span><br><span class="line"></span><br><span class="line">​	扩展名列表: ‪*.lua</span><br><span class="line"></span><br><span class="line">​	提取翻译命令: ‪xgettext  -C  --force-po  -o %o %C %K %F</span><br><span class="line"></span><br><span class="line">​	在关键字列表中的项: ‪-k%k</span><br><span class="line"></span><br><span class="line">​	在输入文件列表中的项: ‪%f</span><br><span class="line"></span><br><span class="line">​	源代码字符集: ‪--from-code&#x3D;%c</span><br></pre></td></tr></table></figure>
+
+
+</li>
+<li><p>打开项目中的 xxx.po 翻译文件， 路径位于项目根目录 / i18n / locale / 下.</p>
+</li>
+</ol>
+<p>在增加的了翻译文本后， 点击工具的“更新”按钮， 即可自动提取翻译文本.</p>
+<p>编写好翻译内容后， 点击保存， 即可自动更新mo文件</p>
+<p>备注：</p>
+<p>​        在增加插件时， 需将新插件路径加入配置文件， 方法： “编目”   -  “属性” , 点击“源路径”标签， 将新插件目录加入。</p>
+]]></content>
+  </entry>
+  <entry>
+    <title>K8S Ingress 方案选型</title>
+    <url>/2021/02/27/ingress%E9%80%89%E5%9E%8B/</url>
+    <content><![CDATA[<h2 id="ingress-产生背景"><a href="#ingress-产生背景" class="headerlink" title="ingress 产生背景:"></a>ingress 产生背景:</h2><p>由于 Pod 可能在任何时刻出现在任何节点上,  所以Pod IP 肯定会动态变化。</p>
+<p>那么如何把这个动态的 Pod IP 暴露出去？ Kubernetes 的 Service 机制就是用于解决此问题，Service 以 label 的形式选定一组带有指定label的 Pod，并监控和自动负载它们的 Pod IP，那么向外只暴露 Service IP 即可.</p>
+<p>Ingress 就是配置各种域名找到对应那个 Service。</p>
+<p>参考: <a href="https://mritd.me/2017/03/04/how-to-use-nginx-ingress/">https://mritd.me/2017/03/04/how-to-use-nginx-ingress/</a></p>
+<h2 id="ingress-组件对比"><a href="#ingress-组件对比" class="headerlink" title="ingress 组件对比"></a>ingress 组件对比</h2><table>
+<thead>
+<tr>
+<th>组件</th>
+<th>ingress-nginx(官方)</th>
+<th>Kong Ingress</th>
+<th>traefik</th>
+<th>Voyager</th>
+<th>istio ingress</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>最新版本</td>
+<td>v0.25</td>
+<td>v0.5</td>
+<td>v2.0 beta, v1.7.12 release</td>
+<td>v10.0</td>
+<td>v1.2</td>
+</tr>
+<tr>
+<td>动态服务发现</td>
+<td>static(有生成器)</td>
+<td>static</td>
+<td>dynamic</td>
+<td>dynamic</td>
+<td>dynamic</td>
+</tr>
+<tr>
+<td>支持协议</td>
+<td>http, https, tcp, udp, grpc</td>
+<td>http, https</td>
+<td>http, https, grpc</td>
+<td>http, https, tcp</td>
+<td>http,https, grpc</td>
+</tr>
+<tr>
+<td>base on</td>
+<td>nginx</td>
+<td>nginx + lua</td>
+<td>traefik (Go)</td>
+<td>haproxy+GO</td>
+<td>envoy</td>
+</tr>
+<tr>
+<td>LB 策略</td>
+<td>rr, least_conn, ip_hash</td>
+<td>rr</td>
+<td>rr, wrr</td>
+<td>rr</td>
+<td>rr, least_conn, random</td>
+</tr>
+</tbody></table>
+<h2 id="Benchmarks"><a href="#Benchmarks" class="headerlink" title="Benchmarks"></a>Benchmarks</h2><table>
+<thead>
+<tr>
+<th>组件名</th>
+<th>QPS</th>
+<th>平均响应时间</th>
+<th>总请求数</th>
+<th>连接数</th>
+<th>持续时间</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>traefik</td>
+<td>28392</td>
+<td>91.72ms</td>
+<td>1705073</td>
+<td>1000</td>
+<td>1分钟</td>
+</tr>
+<tr>
+<td>nginx</td>
+<td>33591</td>
+<td>101.25ms</td>
+<td>2018427</td>
+<td>1000</td>
+<td>1分钟</td>
+</tr>
+</tbody></table>
+<p>traefik 性能达到 nginx 的85%</p>
+<p>数据来源: <a href="https://docs.traefik.cn/benchmarks">https://docs.traefik.cn/benchmarks</a></p>
+<span id="more"></span>
+
+<h2 id="ingress-组件特征对比"><a href="#ingress-组件特征对比" class="headerlink" title="ingress 组件特征对比"></a>ingress 组件特征对比</h2><h4 id="1-ingress-nginx特征"><a href="#1-ingress-nginx特征" class="headerlink" title="1. ingress-nginx特征"></a>1. ingress-nginx特征</h4><p>官方的ingress。安全、简单可靠。</p>
+<p>支持http、https, tcp, udp和ssl termination。</p>
+<p>负载均衡选项以及强大的路由，websocket支持，基础身份认证和追踪。</p>
+<p>没有动态服务发现有点遗憾。有个配置生成器可以自动生成但还是不太完美。</p>
+<h4 id="2-Kong-特征"><a href="#2-Kong-特征" class="headerlink" title="2. Kong 特征"></a>2. Kong 特征</h4><ul>
+<li><p>入口路由：使用Ingress资源配置Kong</p>
+</li>
+<li><p>运行状况检查和负载平衡：跨容器负载平衡请求，并支持主动和被动运行状况检查。</p>
+</li>
+<li><p>配置插件：当请求代理到您的服务时，执行自定义代码。</p>
+</li>
+<li><p>请求/响应转换：使用插件即时修改您的请求/响应。</p>
+</li>
+<li><p>身份验证：使用身份验证插件保护您的服务。</p>
+</li>
+<li><p>Kong的声明性配置使用Kubernetes中的CRD配置所有Kong并以声明方式管理Kong</p>
+<p>它有扩展插件系统使它的功能远远超出了正常ingress该有的功能。</p>
+</li>
+</ul>
+<h4 id="3-Traefik特性："><a href="#3-Traefik特性：" class="headerlink" title="3. Traefik特性："></a>3. Traefik特性：</h4><ul>
+<li>无需安装其他依赖，通过Go语言编写的单一可执行文件</li>
+<li>支持 Rest API</li>
+<li>多种后台支持：Docker, Swarm, Kubernetes, Marathon, Mesos, Consul, Etcd, 并且还会更多</li>
+<li>后台监控, 可以监听后台变化进而自动化应用新的配置文件设置</li>
+<li>配置文件热更新。无需重启进程</li>
+<li>正常结束http连接</li>
+<li>后端断路器</li>
+<li>轮询，rebalancer 负载均衡</li>
+<li>Rest Metrics</li>
+<li>支持最小化 官方 docker 镜像</li>
+<li>后台支持SSL</li>
+<li>前台支持SSL（包括SNI）</li>
+<li>清爽的AngularJS前端页面</li>
+<li>支持Websocket</li>
+<li>支持HTTP/2</li>
+<li>网络错误重试</li>
+<li>支持Let’s Encrypt (自动更新HTTPS证书)</li>
+<li>高可用集群模式</li>
+</ul>
+<h4 id="4-Voyager特性："><a href="#4-Voyager特性：" class="headerlink" title="4. Voyager特性："></a>4. Voyager特性：</h4><p>Voyager是一个构建于HAProxy之上的Ingress。由 AppsCode 开发的用于Kubernetes的L7和L4负载均衡。支持高可用性，会话，名称和基于path的虚拟主机。</p>
+<p>文档资料比较少。参考：<a href="https://appscode.com/products/voyager/">https://appscode.com/products/voyager/</a></p>
+<h4 id="5-Istio-Ingress"><a href="#5-Istio-Ingress" class="headerlink" title="5. Istio Ingress"></a>5. Istio Ingress</h4><p>如果您已经在运行Istio，那么这可能是一个很好的默认选择。它具有Ambassador拥有的一些更现代的功能。它也有故障注入，看起来可能很有趣。然而，Istio目前在这个领域做了很多工作，并且已经从Ingress转向Gateway。因此，如果您正在寻找每5秒钟没有发生变化的Ingress，您可能仍然需要考虑Ambassador。</p>
+<h2 id="插件机制对比"><a href="#插件机制对比" class="headerlink" title="插件机制对比"></a>插件机制对比</h2><h4 id="1-Traefik"><a href="#1-Traefik" class="headerlink" title="1.Traefik"></a>1.Traefik</h4><p>Traefik  提供多种不同的中间件, 有些可以修改请求，标题，有些负责重定向，有些可以添加身份验证等等。这些中间件用于将请求发送到服务之前调整请求。</p>
+<p>注：目前中间件都是由官方提供， 文档中未提供自定义中间件方法。</p>
+<p>原理图：</p>
+<p>有关auth的中间件目前提供了3种， 分别是：BasicAuth，DigestAuth，ForwardAuth。 </p>
+<p>其中 ForwardAuth 中间件可以将身份验证委派给外部自定义服务处理。如果自定义服务响应代码是2XX，则授予访问权限并执行原始请求。否则，返回自定义服务的响应。</p>
+<p>原理图：</p>
+<h4 id="2-kong"><a href="#2-kong" class="headerlink" title="2.kong"></a>2.kong</h4><p>Kong是围绕可扩展的<a href="https://getkong.org/docs/latest/admin-api/#plugin-object">插件</a>架构设计的，并且已经捆绑了各种各样的插件。这些插件可用于修改请求/响应或对流量施加限制。<br>下图显示了KongPlugin资源如何链接到Ingress / Service或KongConsumer。</p>
+<h4 id="3-Voyager"><a href="#3-Voyager" class="headerlink" title="3.Voyager"></a>3.Voyager</h4><p>官方文档未找到插件机制相关资料.</p>
+<h4 id="4-ingress-nginx"><a href="#4-ingress-nginx" class="headerlink" title="4.ingress-nginx"></a>4.ingress-nginx</h4><p>官方文档未找到插件机制相关资料.</p>
+<h4 id="对比-Traefik-和-kong-ingress-的插件机制"><a href="#对比-Traefik-和-kong-ingress-的插件机制" class="headerlink" title="对比 Traefik 和 kong ingress 的插件机制:"></a>对比 Traefik 和 kong ingress 的插件机制:</h4><p> kong ingress  提供最大程度的定制化，可使用自定义插件修改请求/响应或对流量施加限制。 针对认证鉴权的需求, 可使用”Custom Resource Definitions”中的KongCredential做认证（需做一定修改以适用我们的需求）。</p>
+<p> Traefik 本身有类似的插件机制， 但只提供官方插件，未提供自定义插件接入的方法（可通过查看源码了解中间件接入机制）。 针对认证鉴权的需求，可使用 ForwardAuth 插件转发到我们自定义的AuthServer来做。</p>
+<p>备注：</p>
+<p>ingress-nginx虽然没提供插件机制， 但针对Auth提供了4种方案：</p>
+<ul>
+<li>Basic Authentication</li>
+<li>Client Certificate Authentication</li>
+<li>External Basic Authentication</li>
+<li>External OAUTH Authentication</li>
+</ul>
+<p>参考: <a href="https://kubernetes.github.io/ingress-nginx/examples/auth/oauth-external-auth/">https://kubernetes.github.io/ingress-nginx/examples/auth/oauth-external-auth/</a></p>
+]]></content>
+  </entry>
+  <entry>
+    <title>kong源码分析记要</title>
+    <url>/2021/02/27/kong%20%E5%86%85%E5%AD%98/</url>
+    <content><![CDATA[<p>kong的代码运行于nginx的worker进程中。kong对数据的修改会在一个worker中进行，修改后需通知给本机其他worker进程和其他机器上的worker进程。<br>kong 会将数据库记录缓存起来，这里只是缓存kong自身数据比如插件,  service, route 数据, 自定义插件的数据表数据并未缓存, 例如: rate limit 插件的数据也要自己通过kong.cache来缓存,  通过/etc/kong/kong.conf 配置db_update_frequency确定更新route, service, plugins等数据的缓存时间。</p>
+<p><strong>kong使用的进程间通信主要方式有：</strong></p>
+<ol>
+<li>本机间通信-共享内存 </li>
+<li>跨机器通信-数据库</li>
+</ol>
+<span id="more"></span>
+
+<p><strong>数据共享</strong></p>
+<p>kong 数据存在数据库，同时在缓存中保留一份。</p>
+<p>当数据库数据被修改，需发出事件通知其他worker。其他worker收到事件后，删除缓存中对应的数据。</p>
+<p><strong>事件</strong></p>
+<p>1.本地事件: 通知本机上的worker,    由 lua-resty-worker-events 来处理</p>
+<p>2.集群事件: 通知在多台机器上的worker,  由 cluster_events.lua 来处理</p>
+<p><strong>本地事件(共享内存)</strong><br>  本地事件: 通过共享内存实现。</p>
+<p>​    kong实现了一套基于nginx共享内存的事件发布-订阅机制，源码见仓库<a href="https://github.com/Kong/lua-resty-worker-events">https://github.com/Kong/lua-resty-worker-events</a>。</p>
+<p>​       该包提供post_local方法在worker进程内进行事件发布<br>​       提供post方法在本机worker进程间进行事件发布<br>​       这2个方法需要指定source, event来确定事件源。<br>  kong的数据访问层dao.lua封装了insert、update和delete三个对数据操作的方法。</p>
+<p>​        这三个方法分别会使用post_local发出<br>          source为：  dao:crud<br>          event为insert、delete、update 事件。</p>
+<p>​    <strong>事件的数据格式如下:</strong></p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">&#123;</span><br><span class="line">   schema    &#x3D; self.schema, --表名</span><br><span class="line">   operation &#x3D; &quot;create&quot;, --操作类型</span><br><span class="line">   entity    &#x3D; res, --数据</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>​    worker进程启动的时候会在init_worker阶段注册这些事件的订阅方法，见/usr/local/share/lua/5.1/kong/runloop/handler.lua:worker_events.register。</p>
+<p>​        订阅方法中把所有的dao:crud事件按表名称使用post_local再进行分发。</p>
+<p><strong>集群事件(数据库)</strong></p>
+<p>​    集群事件通过数据库实现。数据库表cluster_events存放用于集群间分发的事件.</p>
+<pre><code>  Column   |           Type           | Collation | Nullable | Default 
+```
+
+-----------+--------------------------+-----------+----------+---------
+ id        | uuid                     |           | not null | 
+ node_id   | uuid                     |           | not null | 
+ at        | timestamp with time zone |           | not null | 
+ nbf       | timestamp with time zone |           |          | 
+ expire_at | timestamp with time zone |           | not null | 
+ channel   | text                     |           |          | 
+ data      | text                     |           |          | 
+</code></pre>
+<p> <strong>channel的类型有:</strong></p>
+<ul>
+<li>invalidations,  表示路由规则、插件配置的变更</li>
+<li>balancer:targets, 表示负载均衡的targets列表发生变更</li>
+<li>balancer:upstreams, 表示upstream对象发生变更</li>
+<li>balancer:post_health, 表示target的健康状态发生变更。由于被动健康检查拉出实例后，kong不会在对该实例进行自动拉入，需要通过该事件来拉入实例。</li>
+</ul>
+<p>./runloop/handler.lua </p>
+<p>​         调用 cluster_events.lua 代码中的 _M:broadcast(channel, data, nbf)方法会往cluster_events表中新增一条记录。<br>​         在init_worker阶段通过调用cluster_events:subscribe开启一个定时器，定时查询出cluster_events表中新增的记录。注意: 本机只会有一个worker进程会对数据库进行查询(通过加锁实现，代码见cluster_events:get_lock)，查询出来后再通过共享内存的方式通知给本机其他worker.<br>​        /etc/kong/kong.conf#db_update_frequency 配置参数db_update_frequency 用于确定查询数据库的间隔.   数据范围根据at字段是否落在(起始时间, 结束时间]确定。起始时间第一次设置在init_worker阶段，调用ngx.now()获取当前时间(精确到毫秒)并放入key为cluster_events:at的共享内存中。之后抢到锁的worker会从共享内存中取出该时间，该时间需要减去db_update_propagation + 0.001来确定起始时间，以防止事件丢失。配置参数db_update_propagation默认为0。结束时间取ngx.now()的值。查询成功后会把结束时间覆盖之前的起始时间，并把该事件分发到本机的其他worker。对于设置了nbf的事件，kong如果发现还没到生效时间，就会通过ngx.timer设置一个定时器延后分发该事件.</p>
+<p>详见:  /usr/local/share/lua/5.1/kong/init.lua 的 Kong.init_worker() 中:</p>
+<pre><code>      local cluster_events, err = kong_cluster_events.new &#123;
+              db                      = kong.db,
+            poll_interval           = kong.configuration.db_update_frequency,
+            poll_offset             = kong.configuration.db_update_propagation, 
+      &#125;
+</code></pre>
+<p> Kong 通过这两个核心组件来完成集群中各个节点的状态更新。多个 Kong 节点连接到相同数据库时，便构建起了一个可以动态水平扩展的集群。</p>
+<ul>
+<li>多级缓存 lua-resty-mlcache   <a href="https://github.com/thibaultcha/lua-resty-mlcache">https://github.com/thibaultcha/lua-resty-mlcache</a></li>
+<li>worker 间事件通讯 lua-resty-worker-events </li>
+<li>避免缓存失效风暴,  加锁策略 <a href="https://github.com/openresty/lua-resty-lock">https://github.com/openresty/lua-resty-lock</a></li>
+</ul>
+<p>KONG 需关注参数:</p>
+<p>kong_db_cache  设置kong缓存大小, 用于缓存数据库数据<br>lua_max_running_timers 4096;<br>lua_max_pending_timers 16384;</p>
+<p>lua_code_cache</p>
+<p><a href="http://cyukang.com/2017/07/22/kong-intro-4.html">http://cyukang.com/2017/07/22/kong-intro-4.html</a></p>
+<p><a href="https://ms2008.github.io/2018/06/11/kong-events-cache/">https://ms2008.github.io/2018/06/11/kong-events-cache/</a></p>
+<p><a href="http://cyukang.com/2017/07/22/kong-intro-4.html">http://cyukang.com/2017/07/22/kong-intro-4.html</a></p>
+<p>OpenResty-Best-Practices   最佳实践</p>
+<h1 id="如何设计可扩展的速率限制算法"><a href="#如何设计可扩展的速率限制算法" class="headerlink" title="如何设计可扩展的速率限制算法"></a>如何设计可扩展的速率限制算法</h1><p><a href="https://konghq.com/blog/how-to-design-a-scalable-rate-limiting-algorithm/">https://konghq.com/blog/how-to-design-a-scalable-rate-limiting-algorithm/</a></p>
+]]></content>
+      <categories>
+        <category>API网关</category>
+      </categories>
+  </entry>
+  <entry>
+    <title>使用TCPdump调试traefik网络连接异常</title>
+    <url>/2021/02/27/%E5%85%B3%E4%BA%8Etraefik%E7%BA%BF%E4%B8%8A%E9%97%AE%E9%A2%98%E8%A7%A3%E5%86%B3%E8%BF%87%E7%A8%8B/</url>
+    <content><![CDATA[<p>被这个问题困扰了好一段时间， 期间拉取了traefik代码到本地编译(remark: 官网提供的文件做了优化编译，去掉了调试信息, 无法打断点)， 并打断点调试。</p>
+<p>完成traefik部署后， 检查日志发现traefik 在不断报错， 错误信息：Error while Peeking first byte: read tcp 172.16.2.102:80-&gt;100.xxx.xxx.xxx:xxxxx: read: connection reset by peer.</p>
+<p><img src="/images/traefik/2019-11-15_15-20.png"></p>
+<span id="more"></span>
+<p>百度下错误信息   read: connection reset by peer</p>
+<p>1，如果一端的Socket被关闭（或主动关闭，或因为异常退出而 引起的关闭），另一端仍发送数据，发送的第一个数据包引发该异常(Connect reset by peer)。 </p>
+<p>2，一端退出，但退出时并未关闭该连接，另一端如果在从连接中读数据则抛出该异常（Connection reset）。 </p>
+<p>简单的说就是在连接断开后的读和写操作引起的。</p>
+<p>read: connection reset by peer (连接被对端重置) 错误分析：</p>
+<p>远程服务器已向您发送了一个RST数据包，该数据包指示立即断开连接，而不是通常的握手。这绕过了正常的半关闭状态转换(即4次握手)。 </p>
+<p><strong>带着问题排查异常：</strong>  100.120.151.13是哪里的IP？ 为什么要不断连接到traefik 80端口？</p>
+<p>到百度查询IP： 100.120.151.130 ， 发现这是个局域网保留地址!</p>
+<p><img src="/images/traefik/2019-11-15_15-25.png"></p>
+<p>搜索<a href="https://en.wikipedia.org/wiki/Reserved_IP_addresses">维基百科的Reserved IP Address词条</a>才发现原来教科书上介绍的只是部分保留地址，整个保留地址家族的成员还是比较多的.</p>
+<p>100.64<code>打头的IP地址对应地址块为</code>100.64.0.0/10<code>，地址范围为</code>100.64.0.0<code>~</code>100.127.255.255`，共包含有4,194,304个IP地址。</p>
+<p>这个保留地址也是用于内网，但是这个内网不是一般内网而是<a href="https://en.wikipedia.org/wiki/Carrier-grade_NAT">Carrier-grade NAT</a>，这个英文对应的翻译是“运营商级NAT”。</p>
+<p><strong>100.64.0.0/10运营商级(Carrier-grade)NAT保留IP地址</strong></p>
+<p>在记忆当中内网保留地址只有 10.xxx,   172.xxx,  192.xxx。 在IPv4地址协议中预留了3个IP地址段，作为私有地址，供组织机构内部使用。 </p>
+<p>这三个地址段分别位于A、B、C三类地址内：</p>
+<p><img src="/images/traefik/%E7%A7%81%E7%BD%91%E5%9C%B0%E5%9D%80.png"></p>
+<p>问题： 难道错误信息中的 IP 100.120.151.130 是阿里云在用？ 为什么阿里云要不断发起连接到traefik端口上？</p>
+<p>到服务器中抓包查看 100.64.0.0/10 网段内的ip在做什么。</p>
+<p><img src="/images/traefik/tcpdump.png"></p>
+<p>错误信息：Error while Peeking first byte: read tcp 172.16.2.102:80-&gt;100.xxx.xxx.xxx:xxxxx: read: connection reset by peer.</p>
+<p>TCP建立连接要发起三次握手,   经过4次握手关闭连接。</p>
+<p><img src="/images/traefik/tcp-connection-made-three-way-handshake.png"></p>
+<p><img src="/images/traefik/3hand.png"></p>
+<p><img src="/images/traefik/3hand4hand.png"></p>
+<p>查看100.64.0.0/10网段IP的TCP连接所传输的内容。 tcpdump -i any -AnnvvSs 0 “net 100.64.0.0/10 &amp;&amp; port 80”,     看到本机ip在上报机器的资源使用情况到100.100.21.100， 包括CPU, 磁盘, TCP连接数等等。</p>
+<p><img src="/images/traefik/uploadjiankong.png"></p>
+<p>确定 100.64.0.0/10 网段是阿里云内部用于做监控.   排查云监控中的站点健康检查和 SLB的健康检查。</p>
+<p>将SLB的端口检查方式由TCP 改为 HTTP</p>
+<p><img src="/images/traefik/SLBheath_check.png"></p>
+<p>再次查看错误日志， 已经不报错了。 重新抓包查看连接情况。</p>
+<p><img src="/images/traefik/laste.png"></p>
+<p>查看tcpdump官方文档。</p>
+<p><img src="/images/traefik/tcpflag.png"></p>
+<p><strong>PUSH标志</strong></p>
+<p>要了解PSH标志的功能，我们首先需要了解TCP如何缓冲数据。TCP在OSI模型的第四层运行；它向上层提供了一个简单的套接字，可以对其进行读写，从而掩盖了基于分组的通信的复杂性。</p>
+<p>为了允许应用程序随时读取和写入此套接字，在TCP连接的两端都在两个方向上实现了缓冲区。</p>
+<p>下图显示了发送方在发送之前如何缓冲数据，接收方在接收时如何缓冲数据。</p>
+<p><img src="/images/traefik/tcpbuffer.png"></p>
+<p>当发送超过一个最大段大小（MSS）的数据时（例如，传输一个大文件），缓冲区使数据传输更加有效。</p>
+<p>但是，在处理要求尽快传输数据的实时应用程序时，大型缓冲区弊大于利。</p>
+<p>考虑一下Telnet会话会发生什么情况，例如，如果TCP等待直到有足够的数据来填充一个数据包，然后再发送一个数据包，那么：第一个数据包发送到远程设备之前，您必须输入超过一千个字符。这就不太有用了。</p>
+<p>这就是PSH标志的用处。 <strong>传出TCP数据包中的PSH标志将设置为1（打开）。收到设置了PSH标志的数据包后，连接的另一端立即将分段转发给应用程序， 而不必等待其他数据进入缓冲区</strong>。</p>
+<p>总而言之，TCP的推送功能可以完成两件事：</p>
+<ul>
+<li>发送应用程序通知TCP应该立即发送数据。</li>
+<li>TCP报头中的PSH标志通知接收主机应立即将数据推送到接收应用程序。</li>
+</ul>
+]]></content>
+      <categories>
+        <category>saas</category>
+      </categories>
+  </entry>
+  <entry>
+    <title>kong网关压力测试</title>
+    <url>/2021/02/27/%E7%BD%91%E5%85%B3%E6%80%A7%E8%83%BD%E6%B5%8B%E8%AF%95%E5%8F%8A%E9%97%AE%E9%A2%98%E5%A4%84%E7%90%86/</url>
+    <content><![CDATA[<h4 id="测试环境"><a href="#测试环境" class="headerlink" title="测试环境:"></a>测试环境:</h4><p>​        硬件： 阿里云ECS主机.   配置:  1核1G,  4核4G, 8核8G,       </p>
+<p>​                系统： Ubuntu 18.04.2 LTS （与线上环境统一系统版本）</p>
+<h5 id="基准测试-1核-1G-："><a href="#基准测试-1核-1G-：" class="headerlink" title="基准测试(1核 1G)："></a>基准测试(1核 1G)：</h5><table>
+<thead>
+<tr>
+<th>测试组件</th>
+<th>连接数</th>
+<th>QPS</th>
+<th>响应时间</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>kong</td>
+<td>1万</td>
+<td>7500</td>
+<td>2s</td>
+</tr>
+<tr>
+<td>kong + redis</td>
+<td>1万</td>
+<td>3326</td>
+<td>5s</td>
+</tr>
+<tr>
+<td>kong + redis</td>
+<td>2万</td>
+<td>2000</td>
+<td>7s</td>
+</tr>
+</tbody></table>
+<p>​        <span id="more"></span></p>
+<h5 id="使用1万并发对不同插件进行压力测试"><a href="#使用1万并发对不同插件进行压力测试" class="headerlink" title="使用1万并发对不同插件进行压力测试:"></a>使用1万并发对不同插件进行压力测试:</h5><table>
+<thead>
+<tr>
+<th>插件名</th>
+<th>QPS</th>
+<th>平均响应时间</th>
+<th>总请求数</th>
+<th>失败请求数</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>login**(请求 urs 后端服务)**</td>
+<td>1324</td>
+<td>6.48s</td>
+<td>39836</td>
+<td>34869</td>
+</tr>
+<tr>
+<td>login</td>
+<td>1351</td>
+<td>5.91s</td>
+<td>27165</td>
+<td>0</td>
+</tr>
+<tr>
+<td>request-check</td>
+<td>1057</td>
+<td>7.38s</td>
+<td>21265</td>
+<td>0</td>
+</tr>
+<tr>
+<td>login-check</td>
+<td>863</td>
+<td>8.44s</td>
+<td>17339</td>
+<td>0</td>
+</tr>
+<tr>
+<td>refresh-token</td>
+<td>1549</td>
+<td>5.63s</td>
+<td>29433</td>
+<td>0</td>
+</tr>
+<tr>
+<td>heartbeat</td>
+<td>2934</td>
+<td>3.03s</td>
+<td>58959</td>
+<td>0</td>
+</tr>
+<tr>
+<td>i18n</td>
+<td>6133</td>
+<td>1.54s</td>
+<td>123221</td>
+<td>0</td>
+</tr>
+<tr>
+<td>logout</td>
+<td>1348</td>
+<td>6.30s</td>
+<td>41019</td>
+<td>0</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody></table>
+<h5 id="使用1万并发对不同机器配置进行压力测试"><a href="#使用1万并发对不同机器配置进行压力测试" class="headerlink" title="使用1万并发对不同机器配置进行压力测试:"></a>使用1万并发对不同机器配置进行压力测试:</h5><p><font color="red">登录态：</font></p>
+<table>
+<thead>
+<tr>
+<th>插件名</th>
+<th>硬件配置</th>
+<th>QPS</th>
+<th>平均响应时间</th>
+<th>成功请求数</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>login</td>
+<td>1核 1G</td>
+<td>1351</td>
+<td>5.91s</td>
+<td>27165</td>
+</tr>
+<tr>
+<td>login</td>
+<td>4核 4G</td>
+<td>6231</td>
+<td>1.58s</td>
+<td>184343</td>
+</tr>
+<tr>
+<td>login</td>
+<td>8核 8G</td>
+<td>9292</td>
+<td>1.05s</td>
+<td>279506</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody></table>
+<p><font color="red">非登录态:</font></p>
+<table>
+<thead>
+<tr>
+<th>插件名</th>
+<th>硬件配置</th>
+<th>QPS</th>
+<th>平均响应时间</th>
+<th>成功请求数</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>login</td>
+<td>1核 1G</td>
+<td>910</td>
+<td>8.65s</td>
+<td>18293</td>
+</tr>
+<tr>
+<td>login</td>
+<td>4核 4G</td>
+<td>3025</td>
+<td>3.09s</td>
+<td>91061</td>
+</tr>
+<tr>
+<td>login</td>
+<td>8核 8G</td>
+<td>6406</td>
+<td>1.51s</td>
+<td>192840</td>
+</tr>
+<tr>
+<td>heartbeat</td>
+<td>1核 1G</td>
+<td>2934</td>
+<td>3.03s</td>
+<td>58959</td>
+</tr>
+<tr>
+<td>heartbeat</td>
+<td>4核 4G</td>
+<td>12826</td>
+<td>765.24ms</td>
+<td>386095</td>
+</tr>
+<tr>
+<td>heartbeat</td>
+<td>8核 8G</td>
+<td>21285</td>
+<td>465.81ms</td>
+<td>640638</td>
+</tr>
+</tbody></table>
+<h5 id="压测过程暴露出的问题及处理："><a href="#压测过程暴露出的问题及处理：" class="headerlink" title="压测过程暴露出的问题及处理："></a>压测过程暴露出的问题及处理：</h5><p> <strong>Login 插件压测发现的问题：</strong></p>
+<p>问题一、登录插件读取Postgresql 中 app 配置并保存到 Redis，在高并发情况下大量请求会穿透redis， 打到数据库中压垮Postgresql。<br>               <strong>解决：</strong>在查询数据库代码前， 加入Mutex互斥锁,  防止并发请求穿透redis到数据库查询数据。</p>
+<p>问题二、插件中有大量日志记录操作，在高并发情况下会发生大量磁盘IO， 导致QPS一直上不去.<br>               <strong>解决:</strong>  对日志记录进行分级，调试日志设为 INFO Level， 错误日志设为 ERR Level， 平时只记录ERR级日志， 减少日志磁盘IO.   有需要时再打开 INFO 级日志。 </p>
+<p>问题三、当有大量并发请求使用同一账户时，用于保存session数据的redis key 会被撑爆， 在 Redis  进行 zrange 操作时， 发生 OOM kill， 导致 Redis server 进程被系统Kill 掉， 从火焰图可看出问题出在互踢函数中.</p>
+<p>​               ![](/home/junsheng/Pictures/2019-07-03 15-59-26 的屏幕截图.png)</p>
+<p>​                <strong>解决：</strong>对登录插件进行限流处理， 同一IP访问登录接口时，限制1分钟内的请求次数.</p>
+<p><strong>Request-check 压测发现的问题：</strong></p>
+<p>问题一： 用1万并发压测Request-check插件时，  出现大量 upstream prematurely closed connection while reading response header from upstream 错误。<br>               <strong>解决：</strong>将nginx与php-fpm的通信由 tcp 改为 unix socket. </p>
+<p><strong>KONG的网关本身:</strong></p>
+<p>问题：在网关背后的服务响应缓慢时， 并发高时， 会出现很多超时错误， 此时， KONG直接返回一段错误信息， 与正常时返回JSON字符串的响应方式不一致。</p>
+<p>​           <strong>解决：</strong> 修改kong的错误Handle.   网关错误码设计时预留了 2000 以下的错误码作为保留错误码， 此处是否应该使用这些保留错误码？</p>
+<h5 id="插件性能优化："><a href="#插件性能优化：" class="headerlink" title="插件性能优化："></a>插件性能优化：</h5><p>​    i18n国际化插件优化:     将 xxx.mo 国际化二进制内容保存到kong的一级缓存中，避免大量的读取文件磁盘IO,     性能提升 1000 QPS。</p>
+<pre><code>   login插件优化：对 openresty http 方法，加入超时机制并启用HTTP连接池。
+   
+   login check插件优化：日志记录进行分级, 正常运行只记录ERR级日志。
+</code></pre>
+]]></content>
+      <categories>
+        <category>API网关</category>
+      </categories>
+  </entry>
+  <entry>
+    <title>API网关kong单元测试</title>
+    <url>/2021/02/27/busted/</url>
+    <content><![CDATA[<p>Kong 自行封装了一套基于Busted 的测试框架,   Busted约定将测试放在 spec 文件夹中，命名为 <em>xx</em>_spec.lua.</p>
+<p>网关项目的测试代码存放路径: spec/spec/custom-plugins,  运行单元测试后测试框架将生成一个Kong实例并对其执行测试， 具体查阅 spec/kong_tests.conf 配置文件。  </p>
+<p>注：Kong的单元测试依赖于测试框架 Busted,  具体详细查看Busted介绍部分</p>
+<span id="more"></span>
+
+<p><strong>引用：</strong></p>
+<p>OpenResty提供了一个数据驱动的测试支架，用于为NGINX C模块，Lua库甚至OpenResty应用程序编写声明性测试用例<br>用于Nginx C模块和基于 Nginx / OpenResty 的库和应用程序的数据驱动测试脚手架 </p>
+<p>参考：<br><a href="https://github.com/openresty/test-nginx">https://github.com/openresty/test-nginx</a><br><a href="https://openresty.gitbooks.io/programming-openresty/content/testing/running-tests.html">https://openresty.gitbooks.io/programming-openresty/content/testing/running-tests.html</a></p>
+<p><strong>运行所有测试:</strong><br>cd member-api-gateway/spec， 命令行运行 :</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">.&#x2F;bin&#x2F;busted -o TAP  spec&#x2F;custom-plugins&#x2F;</span><br></pre></td></tr></table></figure>
+
+<p>执行命令后将运行custom-plugins文件夹下的 *_spec.lua 中的所有测试。   </p>
+<p><strong>运行特定插件测试</strong></p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">.&#x2F;bin&#x2F;busted -o TAP  spec&#x2F;custom-plugins&#x2F;logout(特定插件测试目录)</span><br></pre></td></tr></table></figure>
+
+<p>只需在路径后带上子目录。  其他用法例如：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">cd kong&#x2F;bin&#x2F;   &amp;&amp;  busted -o gtest -v  --config-file&#x3D;..&#x2F;.busted   --exclude-tags&#x3D;flaky,ipv6,cassandra,off   </span><br></pre></td></tr></table></figure>
+
+<p>若要将测试集成到 travis ci， 需指定测试结果输出格式为TAP： </p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">.&#x2F;bin&#x2F;busted -o TAP   spec&#x2F;custom-plugins&#x2F;</span><br></pre></td></tr></table></figure>
+
+
+
+
+<h4 id="调试测试代码"><a href="#调试测试代码" class="headerlink" title="调试测试代码"></a>调试测试代码</h4><p>调试kong插件:</p>
+<p>1.在插件中直接打印错误， 例: require “pl.pretty”.dump(allow_origin_domains)<br>2.在对应插件的单元测试代码中，暂停代码执行. 例：os.execute(“sleep 1000”)<br>3.进入测试框架生成的kong运行实例的目录中， 查看错误日志.  实例运行目录在 member-api-gateway/spec/spec/kong_test.conf 中的 prefix 配置项定义.<br>    vim  prefix 路径/logs/error.log 查看插件输出信息.</p>
+<h4 id="测试代码说明"><a href="#测试代码说明" class="headerlink" title="测试代码说明"></a>测试代码说明</h4><h6 id="数据库对象"><a href="#数据库对象" class="headerlink" title="数据库对象"></a>数据库对象</h6><p>bp 的对象是在spec/fixtures/blueprints.lua 中的_M.new(db) 进行定义, 这里定义后， 用于在插入数据时给出默认值，如:自增数据</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">local bp, db &#x3D; helpers.get_db_utils(strategy, &#123;</span><br><span class="line">                &#39;routes&#39;,</span><br><span class="line">                &#39;services&#39;,</span><br><span class="line">                &#39;plugins&#39;,</span><br><span class="line">                &#39;app_config&#39;,    --这里指定要清空数据的表</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<p>db.app_config 对象必须要加载插件request-check 才能访问到, 因为daos.lua文件定义了app_config对象, 通过 </p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">helpers.start_kong(&#123;    plugins &#x3D; &#39;bundled,request-check&#39; &#125;))</span><br></pre></td></tr></table></figure>
+
+<p> 加载插件表对象</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">db.plugins:load_plugin_schemas(conf.loaded_plugins)</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>启动测试用kong实例</strong></p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">assert(helpers.start_kong(&#123;</span><br><span class="line">          database   &#x3D; strategy,</span><br><span class="line">          nginx_conf &#x3D; &quot;spec&#x2F;fixtures&#x2F;custom_nginx.template&quot;,</span><br><span class="line">&#125;))</span><br></pre></td></tr></table></figure>
+
+
+
+
+
+<h3 id="mock-外部接口"><a href="#mock-外部接口" class="headerlink" title="mock 外部接口"></a>mock 外部接口</h3><p>spec/helpers.lua 文件中定义了 mock_upstream_url 地址， 通过这个地址访问mock url.</p>
+<p>需要mocker的url， 需到spec/fixtures/custom_nginx.template文件中的定义行为</p>
+<p>server {<br>        server_name mock_upstream;</p>
+<p>​        ….</p>
+<pre><code>   location = /你要mock的url &#123;
+        content_by_lua_block &#123;
+            local mu = require &quot;spec.fixtures.mock_upstream&quot;
+            ...
+            你自定义的mock 返回数据
+            return mu.send_default_json_response(&#123;
+                delay = delay_seconds,
+            &#125;)
+        &#125;
+    &#125;
+</code></pre>
+<p>}</p>
+<p>–        before_each(function()<br>–            helpers.kill_all()<br>–            assert(db:truncate())<br>–            local service2 = bp.services:insert()<br>–            assert(helpers.start_kong({<br>–              database   = strategy,<br>–              nginx_conf = “spec/fixtures/custom_nginx.template”,<br>–            }))<br>–        end)<br>–    assert(helpers.start_kong({<br>–              database   = strategy,<br>–              nginx_conf = “spec/fixtures/custom_nginx.template”,<br>–            }))<br>–        db:truncate(“plugins”)<br>–        assert(db:truncate())<br>–        db:reset()<br>–        os.execute(“sleep 1000”)<br>–        assert 返回 Failure<br>–        error(err, 2) 返回 Error<br>–        assert.is_true(json.code == 0)<br>–        assert.falsy(err)<br>–        assert.truthy(body.headers[‘authorization’])<br>–        assert.are.same(6, tonumber(res.headers[“x-ratelimit-limit-minute”]))<br>–        assert.same({ message = “API rate limit exceeded” }, json)<br>–        assert.equal(0, body.code)<br>–        assert.not_equal(headers[‘access-token’], res.headers[‘access-token’])<br>–        local row, err = db.plugins:select({id = plugin.id}, { nulls = true })</p>
+<p>–        local res = assert(admin_client:send {<br>        –            method  = “GET”,<br>        –            path    = “/plugins”,<br>        –            headers = {<br>        –              [“Content-Type”] = “application/json”<br>        –            }<br>        –        })<br>        –        local body, err = res:read_body()<br>        –        dump(body)</p>
+<h2 id="Busted介绍"><a href="#Busted介绍" class="headerlink" title="Busted介绍"></a>Busted介绍</h2><p>Busted 是一个 BDD 行为驱动开发测试框架.   《BDD in action》这本书详细讲解行为驱动开发， 属于敏捷开发工程方法范畴。</p>
+<p>kong 官方的单元测试示例:<a href="https://discuss.konghq.com/t/kong-testing-framework/689/2">https://discuss.konghq.com/t/kong-testing-framework/689/2</a></p>
+<p>busted 框架文档 <a href="http://olivinelabs.com/busted/#spies-mocks-stubs">http://olivinelabs.com/busted/#spies-mocks-stubs</a></p>
+<h2 id="安装"><a href="#安装" class="headerlink" title="安装"></a>安装</h2><p>安装前需要注意:</p>
+<blockquote>
+<p>busted works with lua &gt;= 5.1, moonscript, terra, and LuaJIT &gt;= 2.0.0.</p>
+</blockquote>
+<p>即Lua版本必须&gt;=5.1, LuaJIT &gt;= 2.0.0</p>
+<p>首先要通过 luarocks 安装 busted 框架，执行如下命令：</p>
+<p>luarocks install busted</p>
+<p>备注：如需要运行异步测试， 则需安装如下依赖</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">apt-get install libev-dev, git</span><br><span class="line">luarocks install copas</span><br><span class="line">luarocks install lua-ev scm --server&#x3D;http:&#x2F;&#x2F;luarocks.org&#x2F;repositories&#x2F;rocks-scm&#x2F;</span><br><span class="line">luarocks install moonscript</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>然后重新安装和运行测试</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">luarocks remove busted --force</span><br><span class="line">luarocks make</span><br><span class="line">busted spec</span><br></pre></td></tr></table></figure>
+
+
+
+<p>命令行执行：busted</p>
+<p>出现如下信息代表安装成功：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">0 successes &#x2F; 0 failures &#x2F; 2 errors &#x2F; 0 pending : 0.000012 seconds</span><br></pre></td></tr></table></figure>
+
+<p>然后再使用框架执行单元测试test.lua文件：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">busted test.lua</span><br></pre></td></tr></table></figure>
+
+
+
+
+
+<h2 id="task-任务和预定义配置"><a href="#task-任务和预定义配置" class="headerlink" title="task 任务和预定义配置"></a>task 任务和预定义配置</h2><p>Busted 1.6  添加了任务概念和预定义配置。</p>
+<p>任务: 如项目下存在 .busted文件, 则会自动加载.busted定义的任务.<br>预定义配置: Busted –config-file=FILE 使用–config-file 加载配置文件将会覆盖掉根目录下的 .busted 文件 </p>
+<h4 id="任务"><a href="#任务" class="headerlink" title="任务:"></a>任务:</h4><p>​    在项目根目录下创建 .busted 文件， 运行 busted 时如果存在此文件会自动加载它， .busted文件格式如下：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">return &#123;</span><br><span class="line">  -- 这个key会被所有task继承, 这里指定所有task都进行覆盖率分析, coverage 是 Busted 可执行文件的参数, 你可以添加 busted --help 列出的参数</span><br><span class="line">  _all &#x3D; &#123;</span><br><span class="line">    coverage &#x3D; true</span><br><span class="line">  &#125;,</span><br><span class="line"></span><br><span class="line">  -- 未指定任务，则运行default选项， verbose 是 Busted 可执行文件的参数</span><br><span class="line">  default &#x3D; &#123;</span><br><span class="line">    verbose &#x3D; true</span><br><span class="line">  &#125;,</span><br><span class="line"></span><br><span class="line">  -- 任务项</span><br><span class="line">  apiUnit &#x3D; &#123;</span><br><span class="line">    tags &#x3D; &quot;api&quot;,</span><br><span class="line">    ROOT &#x3D; &#123;&quot;spec&#x2F;unit&quot;&#125;,</span><br><span class="line">    verbose &#x3D; true</span><br><span class="line">  &#125;</span><br><span class="line">&#125; </span><br></pre></td></tr></table></figure>
+
+<p>创建 .busted 文件并指定配置后,  运行 <code>busted --run=apiUnit</code>,  即可跑apiUnit测试项.   实际跑运行命令： <code>busted --coverage --tags=api --verbose spec/unit</code></p>
+<p>如果直接运行 busted, 实际跑运行命令： <code>busted --coverage --verbose</code></p>
+<h4 id="预定义配置"><a href="#预定义配置" class="headerlink" title="预定义配置:"></a>预定义配置:</h4><p>​    Busted –config-file=FILE 使用–config-file加载配置文件将会覆盖掉根目录下的 .busted 文件配置</p>
+<h2 id="运行方式"><a href="#运行方式" class="headerlink" title="运行方式"></a>运行方式</h2><h4 id="1-独立运行"><a href="#1-独立运行" class="headerlink" title="1.独立运行"></a>1.独立运行</h4><p>​            在 test.lua 文件的头部添加 <code>require &#39;busted.runner&#39;()</code> ，  它就变成可独立运行的测试，可直接 lua test.lua  运行测试用例.</p>
+<p>​             独立运行方式仍可使用  busted –help 列出的参数， 如：<code>lua test.lua -t &quot;tag&quot; --verbose</code></p>
+<h4 id="2-busted执行器运行"><a href="#2-busted执行器运行" class="headerlink" title="2.busted执行器运行"></a>2.busted执行器运行</h4><p>​            busted test.lua</p>
+<h2 id="定义测试用例"><a href="#定义测试用例" class="headerlink" title="定义测试用例"></a>定义测试用例</h2><p>​    测试用例由 describe 和 it 块组成，describe(别名：context) 可以嵌套多层.  函数before_each, after_each运行在嵌套测试块之前和之后， 函数setup, teardown 运行在describe块之前和之后.</p>
+<p>​    函数pending 用于留下占位符, 以便稍后编写测试代码,  #hashtags 给指定测试打标记。 以便用命令行运行时，通过 -t 选项来运行指定标记测试。 多个标记用逗号分隔。</p>
+<h4 id="describe-Context-blocks"><a href="#describe-Context-blocks" class="headerlink" title="describe:Context blocks"></a>describe:Context blocks</h4><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">describe(&quot;a test&quot;, function()</span><br><span class="line">  -- tests go here</span><br><span class="line"></span><br><span class="line">  describe(&quot;a nested block&quot;, function()</span><br><span class="line">    describe(&quot;can have many describes&quot;, function()</span><br><span class="line">      -- tests</span><br><span class="line">    end)</span><br><span class="line">  end)</span><br><span class="line"></span><br><span class="line">  -- more tests pertaining to the top level</span><br><span class="line">end)</span><br></pre></td></tr></table></figure>
+
+<h4 id="insulate-expose"><a href="#insulate-expose" class="headerlink" title="insulate,  expose:"></a>insulate,  expose:</h4><p>​        这两个指令是 describe 的别名 ， 用于控制 busted 执行的context块的沙箱级别.  insulate 块隔离测试环境, expose 块将测试环境暴露给外部上下文块.  </p>
+<p>​                默认情况下， 每个测试文件运行在一个相互隔离的块中， 可以使用 –no-auto-insulate 来禁止这个特性.</p>
+<p>​        测试环境隔离块中的 lua 全局表 _G, 还有require加载模块缓存变量 package.loaded, 在离开insulate块后， 将还原它们到最初的状态， 因此，其它 describe 块都无法访问 insulate 块中的变量</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">insulate(&quot;an insulated test&quot;, function()</span><br><span class="line">  require(&quot;mymodule&quot;)</span><br><span class="line">  _G.myglobal &#x3D; true</span><br><span class="line"></span><br><span class="line">  -- tests go here</span><br><span class="line"></span><br><span class="line">  describe(&quot;a nested block&quot;, function()</span><br><span class="line">    describe(&quot;can have many describes&quot;, function()</span><br><span class="line">      -- tests</span><br><span class="line">    end)</span><br><span class="line">  end)</span><br><span class="line"></span><br><span class="line">  -- more tests pertaining to the top level</span><br><span class="line">end)</span><br><span class="line"></span><br><span class="line">describe(&quot;a test&quot;, function()</span><br><span class="line">  it(&quot;tests insulate block does not update environment&quot;, function()</span><br><span class="line">    assert.is_nil(package.loaded.mymodule)  -- mymodule is not loaded</span><br><span class="line">    assert.is_nil(_G.myglobal)  -- _G.myglobal is not set</span><br><span class="line">    assert.is_nil(myglobal)</span><br><span class="line">  end)</span><br><span class="line"></span><br><span class="line">  -- tests go here</span><br><span class="line">end)</span><br></pre></td></tr></table></figure>
+
+<p>​        expose块会导出全局表_G和package.loaded的更改到后续的上下文块中(describe 块)。另外，expose 块内创建的任何全局变量，都是在 context block 2 level 之外的环境创建的，在文件头部使用expose 块，将提升require和global的级别到root环境,  这些变量将扩散到后续的测试文件中。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">-- test1_spec.lua</span><br><span class="line">expose(&quot;an exposed test&quot;, function()</span><br><span class="line">  require(&quot;mymodule&quot;)</span><br><span class="line">  _G.myglobal &#x3D; true</span><br><span class="line"></span><br><span class="line">  -- tests can go here</span><br><span class="line"></span><br><span class="line">  describe(&quot;a nested block&quot;, function()</span><br><span class="line">    describe(&quot;can have many describes&quot;, function()</span><br><span class="line">      -- tests</span><br><span class="line">    end)</span><br><span class="line">  end)</span><br><span class="line"></span><br><span class="line">  -- more tests pertaining to the top level</span><br><span class="line">end)</span><br><span class="line"></span><br><span class="line">describe(&quot;a test in same file&quot;, function()</span><br><span class="line">  it(&quot;tests expose block updates environment&quot;, function()</span><br><span class="line">    assert.is_truthy(package.loaded.mymodule) -- mymodule is still loaded</span><br><span class="line">    assert.is_true(_G.myglobal) -- _G.myglobal is still set</span><br><span class="line">    assert.is_equal(myglobal)</span><br><span class="line">  end)</span><br><span class="line"></span><br><span class="line">  -- tests go here</span><br><span class="line">end)</span><br></pre></td></tr></table></figure>
+
+<p>​        </p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">-- test2_spec.lua</span><br><span class="line">describe(&quot;a test in separate file&quot;, function()</span><br><span class="line">  it(&quot;tests expose block updates environment&quot;, function()</span><br><span class="line">    assert.is_truthy(package.loaded.mymodule) -- mymodule is still loaded</span><br><span class="line">    assert.is_true(_G.myglobal)               -- _G.myglobal is still set</span><br><span class="line">    assert.is_equal(_G.myglobal, myglobal)</span><br><span class="line">  end)</span><br><span class="line"></span><br><span class="line">  -- tests go here</span><br><span class="line">end)</span><br></pre></td></tr></table></figure>
+
+<p>​    </p>
+<h4 id="Tagging-Tests"><a href="#Tagging-Tests" class="headerlink" title="Tagging Tests"></a>Tagging Tests</h4><p>​        用#tags对测试用例进行标记，运行测试用 -t 运行指定用例</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">describe(&quot;a test #tag_1&quot;, function()</span><br><span class="line">  -- tests go here</span><br><span class="line">end)</span><br><span class="line"></span><br><span class="line">describe(&quot;a nested block #another&quot;, function()</span><br><span class="line">  describe(&quot;can have many describes&quot;, function()</span><br><span class="line">    -- tests</span><br><span class="line">  end)</span><br><span class="line"></span><br><span class="line">  -- more tests pertaining to the top level</span><br><span class="line">end)</span><br><span class="line"></span><br><span class="line">busted -t &quot;tag_1&quot; .&#x2F;test.lua</span><br></pre></td></tr></table></figure>
+
+<p>​        <strong>–exclude-tags</strong> 选项用于排除指定测试用例， 例如：<code>busted --exclude-tags=&quot;another&quot; ./test.lua</code></p>
+<p>​        -t， –tags，–exclude-tags 一起使用时，  –exclude-tags 优先级最高.</p>
+<h4 id="Randomizing-Tests"><a href="#Randomizing-Tests" class="headerlink" title="Randomizing Tests"></a>Randomizing Tests</h4><p>​        调用 randomize() 使测试随机化</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">describe(&quot;a ramdomized test&quot;, function()</span><br><span class="line">  randomize()</span><br><span class="line"></span><br><span class="line">  it(&quot;runs a test&quot;, function() end)</span><br><span class="line">  it(&quot;runs another test&quot;, function() end)</span><br><span class="line">end)</span><br></pre></td></tr></table></figure>
+
+<p>​        –shuffle 选项使所有测试用例随机运行， 则可以通过 randomize(false)  使得指定的用例的不进行随机化, 即每次都运行.</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">describe(&quot;a non-randomized test&quot;, function()</span><br><span class="line">  randomize(false)</span><br><span class="line"></span><br><span class="line">  it(&quot;runs a test&quot;, function() end)</span><br><span class="line">  it(&quot;runs another test&quot;, function() end)</span><br><span class="line">end)</span><br></pre></td></tr></table></figure>
+<h4 id="It"><a href="#It" class="headerlink" title="It"></a>It</h4><p>​        describe 用于定义上下文块Context blocks， it 用于定义测试, 如果it块中的 assert functions 测试未通过将抛出错误,  assert 也可以用 spec,  test 等别名替代        </p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">describe(&quot;busted&quot;, function()</span><br><span class="line">  it(&quot;has tests&quot;, function()</span><br><span class="line">    local obj1 &#x3D; &#123; test &#x3D; &quot;yes&quot; &#125;</span><br><span class="line">    local obj2 &#x3D; &#123; test &#x3D; &quot;yes&quot; &#125;</span><br><span class="line">    assert.same(obj1, obj2)</span><br><span class="line">  end)</span><br><span class="line">end)</span><br></pre></td></tr></table></figure>
+
+
+
+<h4 id="before-each-after-each-setup-teardown"><a href="#before-each-after-each-setup-teardown" class="headerlink" title="before_each, after_each, setup, teardown"></a>before_each, after_each, setup, teardown</h4><p>​        before_each在每次子测试(it 块)之前运行，after_each则在之后运行。 </p>
+<p>​                setup在describe块中最先运行，teardown在describe块中最后运行。</p>
+<p>​        setup, teardown 有两种模式， lazy(懒惰) 或者 strict(严格),</p>
+<p>​                只有当前或嵌套的 describe 块中至少存在一个子测试时, 才会运行lazy_setup和lazy_teardown.</p>
+<p>​                strict_setup和strict_teardown 总是在describe块中运行, 即使没有子测试.</p>
+<p>​        默认，setup和teardown是strict模式，但可以用 –lazy 选项改变位懒惰模式</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">describe(&quot;busted&quot;, function()</span><br><span class="line">  local obj1, obj2</span><br><span class="line">  local util</span><br><span class="line"></span><br><span class="line">  setup(function()</span><br><span class="line">    util &#x3D; require(&quot;util&quot;)</span><br><span class="line">  end)</span><br><span class="line"></span><br><span class="line">  teardown(function()</span><br><span class="line">    util &#x3D; nil</span><br><span class="line">  end)</span><br><span class="line"></span><br><span class="line">  before_each(function()</span><br><span class="line">    obj1 &#x3D; &#123; test &#x3D; &quot;yes&quot; &#125;</span><br><span class="line">    obj2 &#x3D; &#123; test &#x3D; &quot;yes&quot; &#125;</span><br><span class="line">  end)</span><br><span class="line"></span><br><span class="line">  it(&quot;sets up vars with the before_each&quot;, function()</span><br><span class="line">    obj2 &#x3D; &#123; test &#x3D; &quot;no&quot; &#125;</span><br><span class="line">    assert.are_not.same(obj1, obj2)</span><br><span class="line">  end)</span><br><span class="line"></span><br><span class="line">  it(&quot;sets up vars with the before_each&quot;, function()</span><br><span class="line">    -- obj2 is reset thanks to the before_each</span><br><span class="line">    assert.same(obj1, obj2)</span><br><span class="line">  end)</span><br><span class="line"></span><br><span class="line">  describe(&quot;nested&quot;, function()</span><br><span class="line">    it(&quot;also runs the before_each here&quot;, function()</span><br><span class="line">      -- if this describe also had a before_each, it would run</span><br><span class="line">      -- both, starting with the parents&#39;. You can go n-deep.</span><br><span class="line">    end)</span><br><span class="line">  end)</span><br><span class="line">end)</span><br></pre></td></tr></table></figure>
+
+<h4 id="finally"><a href="#finally" class="headerlink" title="finally"></a>finally</h4><pre><code>    作为更轻的替代方案，避免设置upvalues
+    it(&#39;checks file contents&#39;,function()
+      local f = io.popen(&#39;stupid_process&#39;)
+
+      -- ensure that once test has finished f:close() is called
+      -- independent of test outcome
+      -- 确保一旦测试完成就调用f:close,  独立于测试结果
+      finally(function() f:close() end)
+
+      -- do things with f
+    end)
+
+
+  
+</code></pre>
+<h4 id="Pending"><a href="#Pending" class="headerlink" title="Pending"></a>Pending</h4><p>​        计划稍后编写（或修复）的测试的占位符</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">describe(&quot;busted pending tests&quot;, function()</span><br><span class="line">  pending(&quot;I should finish this test later&quot;)</span><br><span class="line">end)</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="Asserts-断言"><a href="#Asserts-断言" class="headerlink" title="Asserts 断言"></a>Asserts 断言</h2><p>​    它是busted的核心，是用来实际编写测试的东西.   Busted使用luassert库来提供断言。 </p>
+<p>​    注意，一些断言/修饰符是Lua关键字（true，false，nil，function和not）,  不能使用 ‘.’ 来使用它们，因为这会导致编译错误。 可以使用’_’(下划线)或首字母大写来使用。</p>
+<p>​        示例：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">assert.is_true(json.code &#x3D;&#x3D; 0)</span><br><span class="line">assert.falsy(err)</span><br><span class="line">assert.truthy(body.headers[&#39;authorization&#39;])</span><br><span class="line">assert.are.same(6, tonumber(res.headers[&quot;x-ratelimit-limit-minute&quot;]))</span><br><span class="line">assert.same(&#123; message &#x3D; &quot;API rate limit exceeded&quot; &#125;, json)</span><br><span class="line">assert.equal(0, body.code)</span><br><span class="line">assert.not_equal(headers[&#39;access-token&#39;], res.headers[&#39;access-token&#39;])</span><br></pre></td></tr></table></figure>
+
+<p>  详情参考：<a href="https://olivinelabs.com/busted/#asserts">https://olivinelabs.com/busted/#asserts</a></p>
+<h2 id="MOCK"><a href="#MOCK" class="headerlink" title="MOCK"></a>MOCK</h2><p>项目代码往往有很多依赖，各种调用将各个模块连接耦合起来。在设计不佳的系统中甚至可能为了测试一个模块而初始化所有模块. 针对这种情况，使用 mock 可以解决一部分问题.<br>Mock 就是一个真实模块的替代品。可以类比于演员的替身来理解。它与真实模块有相同的接口，但是接口返回值是我们直接指定的特定值，这样就达成了其他模块改变时我们测试的这个模块获得的返回值依然是固定的，也就达成了与其他模块隔离及解耦的目的。</p>
+<p>通过 Mock 的使用，我们还可以监测对一个模块的调用行为，可以通过 Mock 来统计调用次数，也能知道调用时传入的参数。</p>
+<p>Busted 的 Mock 主要提供了调用次数统计、调用时传入参数的获取的功能。但是没有起到让我们指定返回值的作用。在 NUnit 中的 Mock 通常是自行实现一个与真实模块具有相同接口（interface）的类，然后进行使用。在 NUnit 中，Mock 更多地是一种概念而不是实际接口；在 Busted 中则提供了实际的 mock 函数，但是仅仅是有一些监测功能。但是核心问题在于，测试的函数可能依赖多个模块，要调用其他模块的函数、取其中的值。Lua busted 的 Mock 并不能满足需求，所以替代真实模块、隔离系统其他模块的任务，还是需要我们根据实际情况来手工解决。</p>
+<h4 id="busted-提供的调用统计的方法"><a href="#busted-提供的调用统计的方法" class="headerlink" title="busted 提供的调用统计的方法"></a>busted 提供的调用统计的方法</h4><p>​    在 busted 中，进行参数和调用统计的 Mock 分为 spy 和 stub 两种。<br>​    spy 对目标进行监测，可以监测其是否被调用、被用什么函数调用。<br>​    stub 则是对目标进行包装，同样监测其是否被调用、被用什么函数调用。与 spy 不同之处是，stub 会截取调用，不会实际调用目标。适合测试数据层，这样不会实际找数据库要数据。<br>​    spy 和 stub 是单体操作，mock 是对整个表进行的操作，mock(t) 得到 t 的 spies, mock(t, true) 得到 t 的 stubs</p>
+<h4 id="模块隔离-替代的办法"><a href="#模块隔离-替代的办法" class="headerlink" title="模块隔离/替代的办法"></a>模块隔离/替代的办法</h4><p>​    解决全局变量、require 的隔离. </p>
+<p>​    全局量</p>
+<p>​        如果待测试的代码使用了全局变量 <code>GLOBAL</code>，那么使用 stub:  stub(_G, “GLOBAL”)</p>
+<p>​    require</p>
+<p>​        使用 lua 的 package 机制来改变 require.</p>
+<p>​        如果要导入 <code>src/logic/sample_module.lua</code> 这个包，即<code>require(&quot;src/logic/sample_module&quot;)</code>，则使用：</p>
+<pre><code>    package.preload[&quot;src/logic/sample_module&quot;] = function ()
+</code></pre>
+<p>​        –print(“fake load module”)<br>​    end</p>
+<p>​    这样在 require 这一模块时，不会去加载实际的文件，而是运行这里定义函数。在这里面就可以提供我们自己的 Mock 了</p>
+<p>Busted 支持给测试打标签，这样方便独立运行具有某些 tag 或者不具有某些 tag 的测试</p>
+<p>使用方法：</p>
+<ul>
+<li>只测有该标签的测试：<code>busted -o TAP --tags=InternalVariableUsed</code></li>
+<li>排除有该标签的测试：<code>busted -o TAP --exclude-tags=InternalVariableUsed</code></li>
+</ul>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><p>OpenResty提供了一个数据驱动的测试支架，用于为NGINX C模块，Lua库甚至OpenResty应用程序编写声明性测试用例<br>Test :: Nginx - 用于Nginx C模块和基于Nginx / OpenResty的库和应用程序的数据驱动测试脚手架<br>参考：<br><a href="https://github.com/openresty/test-nginx">https://github.com/openresty/test-nginx</a><br><a href="https://openresty.gitbooks.io/programming-openresty/content/testing/running-tests.html">https://openresty.gitbooks.io/programming-openresty/content/testing/running-tests.html</a></p>
+<p>参考链接：</p>
+<ul>
+<li><a href="http://olivinelabs.com/busted/">busted - Elegant Lua unit testing.</a></li>
+<li><a href="https://github.com/Olivine-Labs/busted">busted - GITHUB</a></li>
+<li><a href="https://docs.konghq.com/1.0.x/plugin-development/tests/">kong - Plugin Development - Writing tests</a></li>
+<li><a href="https://segmentfault.com/a/1190000007178147">OpenResty单元测试实践</a></li>
+<li><a href="http://lua-users.org/wiki/UnitTesting">Lua Unit Testing</a></li>
+<li><a href="https://moonbingbing.gitbooks.io/openresty-best-practices/test/unittest.html">openresty 最佳实践 - 测试</a></li>
+</ul>
+]]></content>
+  </entry>
+  <entry>
+    <title>调研数据同步ETL⼯具</title>
+    <url>/2021/02/27/%E6%95%B0%E6%8D%AE%E5%90%8C%E6%AD%A5%E5%B7%A5%E5%85%B7%E8%B0%83%E7%A0%94/</url>
+    <content><![CDATA[<p>开源数据同步中间件: canal databus puma StreamSets SymmetricDS open-replicator<br>⼚商:    阿⾥巴巴 Linkedin ⼤众点评 StreamSets JumpMind whitesock</p>
+<p><img src="/images/etl/total.png"></p>
+<span id="more"></span>
+
+
+
+<h2 id="当前的数据同步主要有两种⽅式"><a href="#当前的数据同步主要有两种⽅式" class="headerlink" title="当前的数据同步主要有两种⽅式:"></a>当前的数据同步主要有两种⽅式:</h2><h4 id="1-准实时同步实现⽅式"><a href="#1-准实时同步实现⽅式" class="headerlink" title="1.准实时同步实现⽅式:"></a>1.准实时同步实现⽅式:</h4><p>主要有触发器、⽇志解析、基于时间戳这三种⽅式。<br>（1）基于触发器的⽅式获取数据⽐较传统，并且因为运维繁琐和性能较差等原因，⽤的也越来越少。开源产品<br>SymmetricDS，可以⾃动化管理触发器并提供统⼀的数据抓取和消费机制，如果想基于触发器做数据同步的话可以使⽤它。<br>（2）基于⽇志解析的⽅式去做同步⽬前最受⻘睐，像MySQL、HBase等都提供了⽇志重放机制，并且协议开源. 优点是对业务表零侵⼊、异步解析⽇志没有性能问题、实时性⽐较⾼等。<br>（3）基于时间戳⽇志解析很美好，但并不是所有DB都提供了这样的机制（如SQL Server)，当触发器和⽇志解析都搞不定时，通过时间戳字段（如：modify_time）定时扫表，拿到变更数据并进⾏同步，也是常⽤的⼀种⼿段.</p>
+<p>缺点：实时性⽐较低、需要业务⽅保证时间戳字段不能出现漏更新，定时扫表查询也可能会带来⼀些性能问题等</p>
+<h4 id="2-离线同步实现⽅式"><a href="#2-离线同步实现⽅式" class="headerlink" title="2.离线同步实现⽅式:"></a>2.离线同步实现⽅式:</h4><pre><code>主要通过Select、⽂件Dump数据(需要⼿⼯导⼊导出)、API抽取等⽅式从源端采集数据。
+</code></pre>
+<p>ETL⼯具基本都是采⽤离线获取数据的⽅式，ETL⼯具解决以下痛点： </p>
+<p>1．当数据来⾃不同物理主机，这时⽤SQL语句去处理，就显得⽐较吃⼒且开销也更⼤。 </p>
+<p>2．数据来源是各种不同的数据库或⽂件，需先把它们整理成统⼀的格式后才能进⾏数据处理，这⼀过程⽤代码实现有些⿇烦。 </p>
+<p>3．在数据库中可以使⽤存储过程去处理数据，但是处理海量数据时, 存储过程显然⽐较吃⼒，而且会占⽤较多数据库的资源，这可能会导致数据资源不⾜，进而影响数据库的性能。</p>
+<p>ETL⼯具可以解决上⾯所说的问题。优点有：<br>1.⽀持多种异构数据源的连接<br>2.图形化的界⾯操作⼗分⽅便<br>3.处理海量数据的速度快，处理的流程也更清晰等等</p>
+<h4 id="准实时同步⽅案⽐较"><a href="#准实时同步⽅案⽐较" class="headerlink" title="准实时同步⽅案⽐较:"></a>准实时同步⽅案⽐较:</h4><p>主要通过Select、⽂件Dump数据(需要⼿⼯导⼊导出)、API抽取等⽅式从源端采集数据。<br>ETL⼯具基本都是采⽤离线获取数据的⽅式，ETL⼯具解决以下痛点：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">数据同步中间件 canal databus puma StreamSets SymmetricDS open-replicator</span><br><span class="line">开发语⾔ java java java java java java</span><br><span class="line">Github Star数 11.4K 2.7K 105 206 348 440</span><br><span class="line">版本 v1.1.4 ⽆ v0.1.1 ⽆ 3.11.0 1.0.7</span><br><span class="line">最近⼀次提交 2019.11.4 2019.4.20 2016.4.7 2019.11.8 2019.11.15 2016.1.5</span><br></pre></td></tr></table></figure>
+
+
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">数据同步平台 otter Porter DataLink</span><br><span class="line">⼚商 阿⾥巴巴B2B国际事业部 随⾏付 神州优⻋集团</span><br><span class="line">开发语⾔ java java java</span><br><span class="line">Github Star数 5.3K 412 452</span><br><span class="line">版本 v4.2.18 V4.0 V0.0.2</span><br><span class="line">最近⼀次提交 2019.9.7 2019.9.10 2019.2.25</span><br></pre></td></tr></table></figure>
+
+
+<p>备注： 以上三个平台均是基于Canal开发，针对我们的需求根据正则规则⾃动添加数据源， 以上平台均不⽀持， 需做定制。</p>
+<h2 id="数据同步平台"><a href="#数据同步平台" class="headerlink" title="数据同步平台"></a>数据同步平台</h2><h4 id="otter"><a href="#otter" class="headerlink" title="otter"></a>otter</h4><p>基于数据库增量⽇志解析，准实时同步到本机房或异地机房的mysql/oracle数据库. ⼀个分布式数据库同步系统。<br>在canal基础上⼜重新实现了可配置的消费者，使⽤otter的话，刚才说过的消费者就不需要写了，而otter提供了⼀个web界⾯，可以⾃定义同步任务及map表。⾮常适合mysql库之间的同步。<br>与阿⾥巴巴另⼀个开源产品 DataX 的区别：<br><strong>DataX 主要是解决全量同步</strong>，通过select语句或者dump指令提取数据，然后同步到⽬标，数据仓库典型⽤法, 主做离线同步<br><strong>canal + otter</strong>，主要是解决准实时同步，通过解析数据库⽇志，然后同步到⽬标，⽹站前台的典型⽤法。 该⽅案适⽤于⼤规模、扩机房、跨区域等重量级数据同步任务，并具有监控、近实时同步等优点。<br>otter 的第三个版本是基于SymmetricDS 2.x版本发展出来，正是因为有了这层关系，otter才与SymmetricDS有⼀些相似。<br>优点：</p>
+<ol>
+<li>管理&amp;运维⽅便. otter为纯java开发的系统，提供web管理界⾯，⼀站式管理整个公司的数据库同步任务.</li>
+<li>同步效率提升. 在保证数据⼀致性的前提下，拆散原先Master的事务内容，基于pk hash的并发同步，可以有效提升5倍以上的同步效率.</li>
+<li>⾃定义同步功能. ⽀持基于增量复制的前提下，定义ETL转化逻辑，完成特殊功能.</li>
+<li>异地机房同步. 相⽐于mysql异地⻓距离机房的复制效率，⽐如阿⾥巴巴杭州和美国机房，复制可以提升20倍以上. ⻓距离传输时，master向slave传输binary log可能会是⼀个瓶颈.</li>
+<li>双A机房同步. ⽬前mysql的M-M部署结构，不⽀持解决数据的⼀致性问题，基于otter的双向复制+⼀致性算法，可完美解决这个问题，真正实现双A机房.</li>
+</ol>
+<p>限制：</p>
+<ol>
+<li>暂不⽀持⽆主键表同步. (同步的表必须要有主键，⽆主键表update会是⼀个全表扫描，效率⽐较差)</li>
+<li>⽀持部分ddl同步 (⽀持create table / drop table / alter table / truncate table / rename table / create index /  drop index，其他类型的暂不⽀持，⽐如grant,create user,trigger等等)，同时ddl语句不⽀持幂等性操作，所以出现重复同步时，会导致同步挂起，可通过配置⾼级参数:跳过ddl异常，来解决这个问题.</li>
+<li>不⽀持带外键的记录同步. (数据载⼊算法会打散事务，进⾏并⾏处理，会导致外键约束⽆法满⾜)</li>
+<li>数据库上trigger配置慎重. (⽐如源库，有⼀张A表配置了trigger，将A表上的变化记录到B表中，而B表也需要同步。如果⽬标库也有这trigger，在同步时会插⼊⼀次A表，2次B表，因为A表的同步插⼊也会触发trigger插⼊⼀次B表，所以有2次B表同步)</li>
+</ol>
+<p>架构图：<br><img src="/images/etl/otter.png"><br><img src="/images/etl/otter-mapping.png"></p>
+<!--more-->
+
+<p>管理界⾯：<br><img src="/images/etl/otter-manager-source.png"></p>
+<p>​    <strong>Porter</strong><br>​    Porter是⼀款数据同步中间件，主要⽤于解决同构/异构数据库之间的表级别数据同步问题， 由随⾏付⽀付公司开源,<br>​    使⽤Java语⾔开发. 基于Canal开源产品，获取MySql数据库增量⽇志数据. 基于Oracle GoldenGate, 获取Oracle数据库增量⽇志数据, 类似的还有 yugong(阿⾥巴巴出品) 与阿⾥云提供的DTS平台⾮常类似。<br>​    主要提供功能： 数据库准实时同步 数据库迁移 数据库治理 ⾃定义源端、⽬标端数据同步 ⾃定义数据抽取逻辑<br>​    核⼼功能： 原⽣⽀持Oracle|Mysql到Jdbc关系型数据库最终⼀致同步 插件友好化，⽀持⾃定义源端消费插件、⽬标端载⼊插件、告警插件等插件⼆次开发 ⽀持⾃定义源端、⽬标端表、字段映射 ⽀持节点基于配置⽂件的同步任务配 置 ⽀持管理后台同步任务推送，节点、任务管理。提供任务运⾏指标监控，节点运⾏⽇志、任务异常告警 ⽀持节点资源限流、分配 基于Zookeeper集群插件的分布式架构, ⽀持⾃定义集群插件.</p>
+<p>​    <img src="/images/etl/porter-jiagou.png"></p>
+<p>​    </p>
+<p>​    操作⻚⾯：</p>
+<p>​    <img src="/images/etl/porter-datasource.png"></p>
+<p>​    <img src="/images/etl/porter-data-table.png"></p>
+<p>​    <strong>DataLink</strong><br>​    ⼀个满⾜各种异构数据源之间的实时增量同步，分布式、可扩展的数据交换平台. 由神州优⻋集团开源, 基于JAVA开 发。依赖于阿⾥巴巴开源产品 canal.<br>​    主要提供功能：<br>​    满⾜各种异构数据源之间的实时增量同步 平台提供统⼀的基础设施（⾼可⽤、动态负载、同步任务管理、插件管理、监控报警、公⽤业务组件等等），让设计⼈员专注于同步插件开发，⼀次投⼊，⻓久受益 吸收、整合业内经验，在架构模型、设计⽅法论、功能特性、可运维、易⽤性上进⾏全⾯的升级，在前瞻性和扩展性上下⾜功夫，满⾜未来5-10年内的各种同步需求.</p>
+<p>可以⽀撑的应⽤场景有：<br>    ReSharding<br>    BigData<br>    CQRS<br>    EDA<br>    SearchBuild<br>    基础参数共享<br>    实时归档<br>    数据镜像<br>    数据库的迁库、拆库、合库以及灾备等等</p>
+<p>​    原理：<br>​    由Task从某⼀个固定类型的数据源读取数据，并同步到若⼲个⽬标端数据源，即为⼀对多的关系。我们将源端数据源类型规定为Task的类型，系统⽬前⽀持的Task类型有：MYSQL, FLEXIBLEQ, HBASE，⽀持同步到的⽬标端数据源类型有：Rdbms、ElasticSearch、Hdfs、HBase、FlexibleQ、SDDL。</p>
+<p>​    概念图：</p>
+<p><img src="/images/etl/datalink-gailian.png"></p>
+<p><img src="/images/etl/datalink-deploy.png"></p>
+<h2 id="数据同步中间件"><a href="#数据同步中间件" class="headerlink" title="数据同步中间件"></a><strong>数据同步中间件</strong></h2><h4 id="SymmetricDS"><a href="#SymmetricDS" class="headerlink" title="SymmetricDS"></a><strong>SymmetricDS</strong></h4><p>​    SymmetricDS是⽤于数据库复制的开源软件，⽀持单向复制，多主复制, 过滤同步和转换。<br>​    基于触发器的数据同步中间件，⽀持多种数据源，⽀持双向同步，⽀持⽂件同步.<br>​    触发器安装在数据库中，以确保捕获到数据更改。这意味着应⽤程序将继续照常使⽤数据库，而⽆需任何特殊的驱动 程序软件。触发器被编写为尽可能小而有效。在SymmetricDS流程中，数据的路由和同步在数据库外部完成。<br>​    阿⾥巴巴 otter 3.0版本也是参考它实现的。<br>功能：<br>​    不同数据库之间的跨平台数据库复制<br>​    本地数据库和云数据库之间的复制<br>​    将多个数据库整合到⼀个数据仓库中<br>​    区域数据库复制以缩短本地⽤⼾的访问时间</p>
+<h4 id="canal"><a href="#canal" class="headerlink" title="canal"></a><strong>canal</strong></h4><p>​    纯Java开发的开源项⽬。基于数据库增量⽇志解析，提供增量数据实时订阅和消费，⽬前主要⽀持了MySQL。<br>​    很多⼤型的互联⽹项⽬⽣产环境中使⽤，包括阿⾥、美团等都有⼴泛的应⽤，是⼀个⾮常成熟的数据库同步⽅案，基础的使⽤只需要进⾏简单的配置即可。<br>​    当前的 canal 仅⽀持MySQL源端, ⽀持版本： 5.1.x , 5.5.x , 5.6.x , 5.7.x , 8.0.x<br>​    基于mysql的binlog进⾏数据同步的中间件。简单来说，Canal 会将⾃⼰伪装成 MySQL 从节点（Slave），并从主节点（Master）获取 Binlog，解析和贮存后供下游消费端使⽤。</p>
+<p><img src="/images/etl/canal.png"></p>
+<p>​    Canal 包含两个组成部分：服务端和客⼾端。服务端负责连接⾄不同的 MySQL 实例，并为每个实例维护⼀个事件消息队列；客⼾端则可以订阅这些队列中的数据变更事件，处理并存储到数据仓库中。<br>​    使⽤的话，安装好canal，配置好数据库参数，再编写⼀个客⼾端消费canal传过来的数据就可以了。如何使⽤官⽹写的挺清楚了，可以直接看官⽹。</p>
+<h4 id="open-replicator"><a href="#open-replicator" class="headerlink" title="open-replicator"></a>open-replicator</h4><p>​    Open Replicator是⽤Java编写的⾼性能MySQL Binlog解析器。它展现了您可以实时分析，过滤和⼴播⼆进制⽇志事件的可能性。 类似Canal的⼀个产品, Linkin开源的databus中的mysql模块⽤到了这个项⽬。</p>
+<h4 id="Puma"><a href="#Puma" class="headerlink" title="Puma"></a>Puma</h4><p> <strong>设计宗旨:</strong><br>    数据库增量数据100%⼀致性的保证<br>    为了100%数据⼀致性的保证，会在极少数时候出现极少数数据的重复，需要业务保证幂等操作<br>    ⾼实时性保证，同⼀机房延时控制在1s以内<br>    ⾯向数据库层⾯设计，而⾮数据库实例层⾯（与业务的隔离性保持相同）<br>    ⾼可⽤性，各个边界上都有ha⽅案的保证<br><strong>原理：</strong><br>    Puma服务器伪装成Mysql Slave节点，连接上Mysql服务器，接收binlog⽇志<br>    Puma服务器解析，过滤并存储数据库的增量变化<br>    Puma客⼾端连接到Puma服务器，进⾏数据库增量的消费<br>    ⽀持范围:<br>    Puma⽬前只⽀持Mysql数据库，后续会加⼊对于其他数据库的⽀持<br>    Mysql⽀持5.1 - 5.6版本，后续会对5.7版本进⾏⽀持</p>
+<p><img src="/images/etl/puma.png"></p>
+<h4 id="Databus"><a href="#Databus" class="headerlink" title="Databus"></a>Databus</h4><p>​    Databus是⼀个实时的低延时数据抓取系统。它将数据库作为唯⼀真实数据来源，并将变更从事务或提交⽇志中提取出来，然后通知相关的衍⽣数据库或缓存。 Databus 的传输层端到端延迟是微秒级的，每台服务器每秒可以处理数千次数据吞吐变更事件，同时还⽀持⽆限回溯能⼒和丰富的变更订阅功能。概要结构如下图:</p>
+<p>​    <img src="/images/etl/databus-bus.png"></p>
+<p>​    图中显⽰：Search Index 和 Read Replicas 等系统是 Databus 的消费者。当主 OLTP 数据库发⽣写操作时，连接其上的中继系统会将数据拉到中继中。签⼊在 Search Index 或是缓存中的 Databus 消费者客⼾端，就会从中继中拉出数据，并更新索引或缓存.</p>
+<p>​    ⽬前databus的主要应⽤：<br>​    1.是主数据库和衍⽣数据库的同步，⼀般是为了对主数据库数据按另外维度进⾏组织，提供给查询使⽤<br>​    2.是⽤来将数据库数据同步到缓存中，这样主要是为了减轻数据库读压⼒。</p>
+<p>​    解决⽅案的决策过程:<br>​    1.程序实现双写：<br>​    在此模型中，应⽤程序层写⼊数据库，然后并⾏写⼊另⼀个消息传递系统。这看起来很容易实现，因为将应⽤程序代码写⼊数据库是在我们的控制之下。 但是，由于没有复杂的协调协议（例如Paxos或2-Phase Commit），很难确保数据库和消息传递系统在⾯对故障时彼此完全锁定，因此会带来⼀致性问题。<br>​    2.基于数据库⽇志⽂件： 将数据库作为唯⼀真实数据来源，并将变更从事务或提交⽇志中提取出来。这可以解决⼀致 性问题，但是很难实现，因为 Oracle 和 MySQL 有私有的交易⽇志格式和复制冗余解决⽅案，难以保证版本升级之后的可⽤性。由于要解决的是处理应⽤代码发起的数据变更，然后写⼊到另⼀个数据库中，冗余系统就得是⽤⼾层⾯的，而且要与来源⽆关。对于快速变化的技术公司，这种与数据来源的独⽴性⾮常重要，可以避免应⽤栈的技术锁定，或是绑死在⼆进制格式上。<br>​    在评估了两种⽅式的优劣之后，我们决定选择⽇志挖掘，将⼀致性和单⼀真实数据来源作为最⾼优先级，而不是易于 实现。</p>
+<p>提供以下功能：<br>    ⽀持多种数据来源的变更抓取，包括 Oracle 和 MySQL。<br>    可扩展、⾼度可⽤：Databus 能扩展到⽀持数千消费者和事务数据来源，同时保持⾼度可⽤性。<br>    事务按序提交：Databus 能保持来源数据库中的事务完整性，并按照事务分组和来源的提交顺寻交付变更件。<br>    低延迟、⽀持多种订阅机制：数据源变更完成后，Databus 能在微秒级内将事务提交给消费者。同时，消费者<br>    使⽤ Databus 中的服务器端过滤功能，可以只获取⾃⼰需要的特定数据。<br>    ⽆限回溯：这是 Databus 最具创新性的组件之⼀，对消费者⽀持⽆限回溯能⼒。当消费者需要产⽣数据的完<br>    整拷⻉时（⽐如新的搜索索引），它不会对主 OLTP 数据库产⽣任何额外负担，就可以达成⽬的。当消费者<br>    的数据⼤⼤落后于来源数据库时，也可以使⽤该功能。</p>
+<p>​    <img src="/images/etl/databus.png"></p>
+<p>​    粗略的来说databus主要模块是两个，⼀个是relay，负责从mysql/oracle拉取变更事件，并存储到本地的内存buffer；<br>​    ⼀个是client，负责从relay拉取变更事件，并做业务定制化的处理。 上⾯的图⽚是Databus的⼤致架构，可以看到包括中继Relay、Bootstrap服务和客⼾端库三⼤模块；其中Bootstrap包括BootStrap Producer和BootStrap Server。快速变化的消费者从relay中拉取数据，但如果⼀个消费者的数据⼤幅度落后，relay就不能提供它要的数据，转而由Bootstrap Producer提供给它⾃上次处理后变更的所有数据快照。下⾯来具体的介绍下这⼏个模块的主要功能：<br>​    Databus Relay中继主要功能：<br>​    从Databus来源读取变更⾏，并在内存缓存中将其序列化为DataBus事件。 监听来着Databus客⼾端(包括Bootstrap)的请求，并传输新的Databus变更事件<br>​    Databus客⼾端的功能主要包括：<br>​    检查Relay上新的数据事件的变更，并执⾏特定业务逻辑的回调 如果落后Relay太多，则向BootStrap Server发起查询新的DataBus客⼾端会先向BootStrap Server发起bootstrap查询，然后再切换到向中继发起查询，以完成最新的数据 变更 单⼀客⼾端可以处理整个Databus数据流，或者可以成为消费者集群的⼀部分，其中每个消费者只处理⼀部分流数据<br>​    Bootstrap Server可以看成⼀种特定的Databus客⼾端，它的功能有：<br>​    监听中继数据变⾰ 将变更存储到mysql数据库中 mysql数据库供Bootstrap和客⼾端使⽤ Databus Bootstrap Server的<br>​    主要功能，就是监听来⾃Databus客⼾端的请求，并返回⻓期回溯数据变更事件。</p>
+<p>​    参考：<br>​    <a href="https://yq.aliyun.com/articles/85407">https://yq.aliyun.com/articles/85407</a></p>
+<h4 id="StreamSets"><a href="#StreamSets" class="headerlink" title="StreamSets"></a>StreamSets</h4><p>​    Streamsets是⼀个⼤数据实时采集ETL⼯具，可以实现不写⼀⾏代码完成数据的采集和流转。通过拖拽式的可视化界⾯，实现数据管道(Pipelines)的设计和定时任务调度。 数据源⽀持MySQL、Oracle等结构化和半/⾮结构化，⽬标源<br>​    ⽀持HDFS、Hive、Hbase、Kudu、Solr、Elasticserach等。创建⼀个Pipelines管道需要配置数据源(Origins)、操作 (Processors)、⽬的地(Destinations)三部分。</p>
+<p>​    <strong>Streamsets的强⼤之处：</strong><br>​    拖拽式可视化界⾯操作，No coding required 可实现不写⼀⾏代码<br>​    强⼤整合⼒，100+ Ready-to-Use Origins and Destinations，⽀持100+数据源和⽬标源<br>​    可视化内置调度监控，实时观测数据流和数据质量</p>
+<p>​    <img src="/images/etl/streamsets.png"></p>
+<p>​    原理：<br>​    StreamSets 数据收集器是⼀个轻量级，强⼤的引擎，实时流数据。使⽤Data Collector在数据流中路由和处理数据。 要为Data Collector定义数据流，请配置管道。⼀个流⽔线由代表流⽔线起点和终点的阶段以及您想要执⾏的任何附加处理组成。配置管道后，单击“开始”，“ 数据收集器”开始⼯作。 Data Collector在数据到达原点时处理数据，在不需要时静静地等待。您可以查看有关数据的实时统计信息，在数据通过管道时检查数据，或仔细查看数据快照。</p>
+<h2 id="离线同步⽅案"><a href="#离线同步⽅案" class="headerlink" title="离线同步⽅案"></a>离线同步⽅案</h2><p>​    离线同步⽅案基本上是⽤开源的ETL⼯具, 这⾥集中调研了开源免费的ETL⼯具。<br>​    ETL⼯具中， kettle、DataStage、Informatica 这三⼤⼯具依旧牢牢稳固传统数仓三⼤主⼒位置, 占据国内市场的⼤部分的份额, 看ETL⼯程师招聘要求可知.<br>​    Datastage和Informatica是商业⼯具，价格不菲。 kettle 是最著名的开源产品，纯Java编写的ETL⼯具, 免费。</p>
+<p>​    <strong>下表是开源ETL⼯具⽐较:</strong></p>
+<p>  ⽐较维度 kettle talend datax<br>    使⽤⽅式<br>    开发和⽣产环境需独⽴部署, 任<br>    务的编写，调试，修改都在本地<br>    需发布到⽣产环境，⽣产没有界<br>    ⾯，需要通过⽇志调试<br>    开发和⽣产环境需独⽴部署, 任务<br>    的编写，调试，修改都在本地<br>    需发布到⽣产环境<br>    以脚本的⽅式执⾏任务，需熟悉源码才能调<br>    ⽤，没有图形化开发界⾯和监控界⾯。<br>    底层<br>    框架<br>    主从结构⾮⾼可⽤，不适合⼤数<br>    据场景 ⽀持分布式部署 ⽀ 署持 ⽅单 式机和集群(通过调度平台规避)两种部<br>    CDC<br>    机制 基于时间戳、触发器 基于时间戳、触发器、⾃增序列 离线批处理<br>    监控<br>    告警<br>    依赖⽇志定位故障，缺少过程预<br>    警 有问题预警，定位问题依赖⽇志 依 ⾯赖 和⼯ 预具 警⽇ 机志 制定 ，位 需故 ⾃障 定， 义没 开有 发图形化运维界<br>    数据<br>    清洗<br>    围绕数据仓库的数据需求进⾏建<br>    模计算，需⼿动编程 ⽀持复杂罗辑清洗和转化 需根据⾃⾝规则编写清晰脚本，进⾏调⽤<br>    数据<br>    转换 ⼿动配置scheme mapping ⼿动配置scheme mapping 编写json⽂件进⾏定义</p>
+<h4 id="kettle"><a href="#kettle" class="headerlink" title="kettle"></a>kettle</h4><p>​    kettle痛点:<br>​    1.全量抽取较⼤数据量时，抽取时间⻓ 2.往hdfs导数据出现漏导的情况，造成数据不⼀致 3.⽆法感知namenode的切<br>​    换，当Hadoop集群重启时，⼀旦namenode发⽣切换，就可能造成kettle任务的失败，因为kettle的hdfs地址是在配置<br>​    ⽂件中配置的 4.kettle往Greenplum中导数据，速度⾮常慢（40条每秒）</p>
+<h4 id="Datax"><a href="#Datax" class="headerlink" title="Datax"></a>Datax</h4><p>​    1.Datax作为⼀种ETL⼯具，还是⽐较简单的，不仅是配置简单，而且Datax的错误⽇志也很智能化，我们排错的时候<br>​    也会⽐较⽅便 2.Datax适合于直连⽅式的数据同步。对于数据⽂件⽅式的同步，需要我们⾃⼰去维护数据的字段信<br>​    息，配置起来⽐较繁琐，没有kettle⽅便 3.Datax⽬前也是不⽀持namenode切换的动态感知 4.Datax的⼯作流需要依<br>​    托于调度⼯具的流，本⾝并不具备⼯作流特性<br>​    DataX是由Alibaba开源的⼀款异构数据同步⼯具，可以在常⻅的各种数据源之间进⾏同步，并仅依赖Java环境，具<br>​    有轻量、插件式、⽅便等优点，可以快速完成同步任务。⼀般公司的数据同步任务，基本可以满⾜。<br>​    参考：<br>​    <a href="https://dbaplus.cn/news-141-2315-1.html">https://dbaplus.cn/news-141-2315-1.html</a><br>​    <a href="https://www.ctolib.com/topics-96532.html#articleHeader10">https://www.ctolib.com/topics-96532.html#articleHeader10</a><br>​    <a href="https://anjia0532.github.io/2019/06/10/cdh-streamsets/">https://anjia0532.github.io/2019/06/10/cdh-streamsets/</a></p>
+]]></content>
+      <categories>
+        <category>中间件</category>
+      </categories>
+  </entry>
+</search>

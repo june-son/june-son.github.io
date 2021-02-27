@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"june-son.github.io","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="ingress 产生背景:由于 Pod 可能在任何时刻出现在任何节点上,  所以Pod IP 肯定会动态变化。 那么如何把这个动态的 Pod IP 暴露出去？ Kubernetes 的 Service 机制就是用于解决此问题，Service 以 label 的形式选定一组带有指定label的 Pod，并监控和自动负载它们的 Pod IP，那么向外只暴露 Service IP 即可. Ingress">
+<meta property="og:type" content="article">
+<meta property="og:title" content="K8S Ingress 方案选型">
+<meta property="og:url" content="https://june-son.github.io/2021/02/27/ingress%E9%80%89%E5%9E%8B/index.html">
+<meta property="og:site_name" content="俊生的博客">
+<meta property="og:description" content="ingress 产生背景:由于 Pod 可能在任何时刻出现在任何节点上,  所以Pod IP 肯定会动态变化。 那么如何把这个动态的 Pod IP 暴露出去？ Kubernetes 的 Service 机制就是用于解决此问题，Service 以 label 的形式选定一组带有指定label的 Pod，并监控和自动负载它们的 Pod IP，那么向外只暴露 Service IP 即可. Ingress">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2021-02-27T07:30:20.936Z">
+<meta property="article:modified_time" content="2021-02-27T07:30:20.936Z">
+<meta property="article:author" content="juneson">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://june-son.github.io/2021/02/27/ingress%E9%80%89%E5%9E%8B/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'en'
+  };
+</script>
+
+  <title>K8S Ingress 方案选型 | 俊生的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">俊生的博客</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>Categories</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>Archives</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="https://june-son.github.io/2021/02/27/ingress%E9%80%89%E5%9E%8B/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="juneson">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="俊生的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          K8S Ingress 方案选型
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-02-27 15:30:20" itemprop="dateCreated datePublished" datetime="2021-02-27T15:30:20+08:00">2021-02-27</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h2 id="ingress-产生背景"><a href="#ingress-产生背景" class="headerlink" title="ingress 产生背景:"></a>ingress 产生背景:</h2><p>由于 Pod 可能在任何时刻出现在任何节点上,  所以Pod IP 肯定会动态变化。</p>
+<p>那么如何把这个动态的 Pod IP 暴露出去？ Kubernetes 的 Service 机制就是用于解决此问题，Service 以 label 的形式选定一组带有指定label的 Pod，并监控和自动负载它们的 Pod IP，那么向外只暴露 Service IP 即可.</p>
+<p>Ingress 就是配置各种域名找到对应那个 Service。</p>
+<p>参考: <a target="_blank" rel="noopener" href="https://mritd.me/2017/03/04/how-to-use-nginx-ingress/">https://mritd.me/2017/03/04/how-to-use-nginx-ingress/</a></p>
+<h2 id="ingress-组件对比"><a href="#ingress-组件对比" class="headerlink" title="ingress 组件对比"></a>ingress 组件对比</h2><table>
+<thead>
+<tr>
+<th>组件</th>
+<th>ingress-nginx(官方)</th>
+<th>Kong Ingress</th>
+<th>traefik</th>
+<th>Voyager</th>
+<th>istio ingress</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>最新版本</td>
+<td>v0.25</td>
+<td>v0.5</td>
+<td>v2.0 beta, v1.7.12 release</td>
+<td>v10.0</td>
+<td>v1.2</td>
+</tr>
+<tr>
+<td>动态服务发现</td>
+<td>static(有生成器)</td>
+<td>static</td>
+<td>dynamic</td>
+<td>dynamic</td>
+<td>dynamic</td>
+</tr>
+<tr>
+<td>支持协议</td>
+<td>http, https, tcp, udp, grpc</td>
+<td>http, https</td>
+<td>http, https, grpc</td>
+<td>http, https, tcp</td>
+<td>http,https, grpc</td>
+</tr>
+<tr>
+<td>base on</td>
+<td>nginx</td>
+<td>nginx + lua</td>
+<td>traefik (Go)</td>
+<td>haproxy+GO</td>
+<td>envoy</td>
+</tr>
+<tr>
+<td>LB 策略</td>
+<td>rr, least_conn, ip_hash</td>
+<td>rr</td>
+<td>rr, wrr</td>
+<td>rr</td>
+<td>rr, least_conn, random</td>
+</tr>
+</tbody></table>
+<h2 id="Benchmarks"><a href="#Benchmarks" class="headerlink" title="Benchmarks"></a>Benchmarks</h2><table>
+<thead>
+<tr>
+<th>组件名</th>
+<th>QPS</th>
+<th>平均响应时间</th>
+<th>总请求数</th>
+<th>连接数</th>
+<th>持续时间</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>traefik</td>
+<td>28392</td>
+<td>91.72ms</td>
+<td>1705073</td>
+<td>1000</td>
+<td>1分钟</td>
+</tr>
+<tr>
+<td>nginx</td>
+<td>33591</td>
+<td>101.25ms</td>
+<td>2018427</td>
+<td>1000</td>
+<td>1分钟</td>
+</tr>
+</tbody></table>
+<p>traefik 性能达到 nginx 的85%</p>
+<p>数据来源: <a target="_blank" rel="noopener" href="https://docs.traefik.cn/benchmarks">https://docs.traefik.cn/benchmarks</a></p>
+<span id="more"></span>
+
+<h2 id="ingress-组件特征对比"><a href="#ingress-组件特征对比" class="headerlink" title="ingress 组件特征对比"></a>ingress 组件特征对比</h2><h4 id="1-ingress-nginx特征"><a href="#1-ingress-nginx特征" class="headerlink" title="1. ingress-nginx特征"></a>1. ingress-nginx特征</h4><p>官方的ingress。安全、简单可靠。</p>
+<p>支持http、https, tcp, udp和ssl termination。</p>
+<p>负载均衡选项以及强大的路由，websocket支持，基础身份认证和追踪。</p>
+<p>没有动态服务发现有点遗憾。有个配置生成器可以自动生成但还是不太完美。</p>
+<h4 id="2-Kong-特征"><a href="#2-Kong-特征" class="headerlink" title="2. Kong 特征"></a>2. Kong 特征</h4><ul>
+<li><p>入口路由：使用Ingress资源配置Kong</p>
+</li>
+<li><p>运行状况检查和负载平衡：跨容器负载平衡请求，并支持主动和被动运行状况检查。</p>
+</li>
+<li><p>配置插件：当请求代理到您的服务时，执行自定义代码。</p>
+</li>
+<li><p>请求/响应转换：使用插件即时修改您的请求/响应。</p>
+</li>
+<li><p>身份验证：使用身份验证插件保护您的服务。</p>
+</li>
+<li><p>Kong的声明性配置使用Kubernetes中的CRD配置所有Kong并以声明方式管理Kong</p>
+<p>它有扩展插件系统使它的功能远远超出了正常ingress该有的功能。</p>
+</li>
+</ul>
+<h4 id="3-Traefik特性："><a href="#3-Traefik特性：" class="headerlink" title="3. Traefik特性："></a>3. Traefik特性：</h4><ul>
+<li>无需安装其他依赖，通过Go语言编写的单一可执行文件</li>
+<li>支持 Rest API</li>
+<li>多种后台支持：Docker, Swarm, Kubernetes, Marathon, Mesos, Consul, Etcd, 并且还会更多</li>
+<li>后台监控, 可以监听后台变化进而自动化应用新的配置文件设置</li>
+<li>配置文件热更新。无需重启进程</li>
+<li>正常结束http连接</li>
+<li>后端断路器</li>
+<li>轮询，rebalancer 负载均衡</li>
+<li>Rest Metrics</li>
+<li>支持最小化 官方 docker 镜像</li>
+<li>后台支持SSL</li>
+<li>前台支持SSL（包括SNI）</li>
+<li>清爽的AngularJS前端页面</li>
+<li>支持Websocket</li>
+<li>支持HTTP/2</li>
+<li>网络错误重试</li>
+<li>支持Let’s Encrypt (自动更新HTTPS证书)</li>
+<li>高可用集群模式</li>
+</ul>
+<h4 id="4-Voyager特性："><a href="#4-Voyager特性：" class="headerlink" title="4. Voyager特性："></a>4. Voyager特性：</h4><p>Voyager是一个构建于HAProxy之上的Ingress。由 AppsCode 开发的用于Kubernetes的L7和L4负载均衡。支持高可用性，会话，名称和基于path的虚拟主机。</p>
+<p>文档资料比较少。参考：<a target="_blank" rel="noopener" href="https://appscode.com/products/voyager/">https://appscode.com/products/voyager/</a></p>
+<h4 id="5-Istio-Ingress"><a href="#5-Istio-Ingress" class="headerlink" title="5. Istio Ingress"></a>5. Istio Ingress</h4><p>如果您已经在运行Istio，那么这可能是一个很好的默认选择。它具有Ambassador拥有的一些更现代的功能。它也有故障注入，看起来可能很有趣。然而，Istio目前在这个领域做了很多工作，并且已经从Ingress转向Gateway。因此，如果您正在寻找每5秒钟没有发生变化的Ingress，您可能仍然需要考虑Ambassador。</p>
+<h2 id="插件机制对比"><a href="#插件机制对比" class="headerlink" title="插件机制对比"></a>插件机制对比</h2><h4 id="1-Traefik"><a href="#1-Traefik" class="headerlink" title="1.Traefik"></a>1.Traefik</h4><p>Traefik  提供多种不同的中间件, 有些可以修改请求，标题，有些负责重定向，有些可以添加身份验证等等。这些中间件用于将请求发送到服务之前调整请求。</p>
+<p>注：目前中间件都是由官方提供， 文档中未提供自定义中间件方法。</p>
+<p>原理图：</p>
+<p>有关auth的中间件目前提供了3种， 分别是：BasicAuth，DigestAuth，ForwardAuth。 </p>
+<p>其中 ForwardAuth 中间件可以将身份验证委派给外部自定义服务处理。如果自定义服务响应代码是2XX，则授予访问权限并执行原始请求。否则，返回自定义服务的响应。</p>
+<p>原理图：</p>
+<h4 id="2-kong"><a href="#2-kong" class="headerlink" title="2.kong"></a>2.kong</h4><p>Kong是围绕可扩展的<a target="_blank" rel="noopener" href="https://getkong.org/docs/latest/admin-api/#plugin-object">插件</a>架构设计的，并且已经捆绑了各种各样的插件。这些插件可用于修改请求/响应或对流量施加限制。<br>下图显示了KongPlugin资源如何链接到Ingress / Service或KongConsumer。</p>
+<h4 id="3-Voyager"><a href="#3-Voyager" class="headerlink" title="3.Voyager"></a>3.Voyager</h4><p>官方文档未找到插件机制相关资料.</p>
+<h4 id="4-ingress-nginx"><a href="#4-ingress-nginx" class="headerlink" title="4.ingress-nginx"></a>4.ingress-nginx</h4><p>官方文档未找到插件机制相关资料.</p>
+<h4 id="对比-Traefik-和-kong-ingress-的插件机制"><a href="#对比-Traefik-和-kong-ingress-的插件机制" class="headerlink" title="对比 Traefik 和 kong ingress 的插件机制:"></a>对比 Traefik 和 kong ingress 的插件机制:</h4><p> kong ingress  提供最大程度的定制化，可使用自定义插件修改请求/响应或对流量施加限制。 针对认证鉴权的需求, 可使用”Custom Resource Definitions”中的KongCredential做认证（需做一定修改以适用我们的需求）。</p>
+<p> Traefik 本身有类似的插件机制， 但只提供官方插件，未提供自定义插件接入的方法（可通过查看源码了解中间件接入机制）。 针对认证鉴权的需求，可使用 ForwardAuth 插件转发到我们自定义的AuthServer来做。</p>
+<p>备注：</p>
+<p>ingress-nginx虽然没提供插件机制， 但针对Auth提供了4种方案：</p>
+<ul>
+<li>Basic Authentication</li>
+<li>Client Certificate Authentication</li>
+<li>External Basic Authentication</li>
+<li>External OAUTH Authentication</li>
+</ul>
+<p>参考: <a target="_blank" rel="noopener" href="https://kubernetes.github.io/ingress-nginx/examples/auth/oauth-external-auth/">https://kubernetes.github.io/ingress-nginx/examples/auth/oauth-external-auth/</a></p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/02/27/kong%20%E5%86%85%E5%AD%98/" rel="prev" title="kong源码分析记要">
+      <i class="fa fa-chevron-left"></i> kong源码分析记要
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/02/27/gnu%20gettext/" rel="next" title="国际化(i18n)和本地化(i10n)工具GNU gettext">
+      国际化(i18n)和本地化(i10n)工具GNU gettext <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#ingress-%E4%BA%A7%E7%94%9F%E8%83%8C%E6%99%AF"><span class="nav-number">1.</span> <span class="nav-text">ingress 产生背景:</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ingress-%E7%BB%84%E4%BB%B6%E5%AF%B9%E6%AF%94"><span class="nav-number">2.</span> <span class="nav-text">ingress 组件对比</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Benchmarks"><span class="nav-number">3.</span> <span class="nav-text">Benchmarks</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ingress-%E7%BB%84%E4%BB%B6%E7%89%B9%E5%BE%81%E5%AF%B9%E6%AF%94"><span class="nav-number">4.</span> <span class="nav-text">ingress 组件特征对比</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-ingress-nginx%E7%89%B9%E5%BE%81"><span class="nav-number">4.0.1.</span> <span class="nav-text">1. ingress-nginx特征</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-Kong-%E7%89%B9%E5%BE%81"><span class="nav-number">4.0.2.</span> <span class="nav-text">2. Kong 特征</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3-Traefik%E7%89%B9%E6%80%A7%EF%BC%9A"><span class="nav-number">4.0.3.</span> <span class="nav-text">3. Traefik特性：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#4-Voyager%E7%89%B9%E6%80%A7%EF%BC%9A"><span class="nav-number">4.0.4.</span> <span class="nav-text">4. Voyager特性：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#5-Istio-Ingress"><span class="nav-number">4.0.5.</span> <span class="nav-text">5. Istio Ingress</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8F%92%E4%BB%B6%E6%9C%BA%E5%88%B6%E5%AF%B9%E6%AF%94"><span class="nav-number">5.</span> <span class="nav-text">插件机制对比</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-Traefik"><span class="nav-number">5.0.1.</span> <span class="nav-text">1.Traefik</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-kong"><span class="nav-number">5.0.2.</span> <span class="nav-text">2.kong</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3-Voyager"><span class="nav-number">5.0.3.</span> <span class="nav-text">3.Voyager</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#4-ingress-nginx"><span class="nav-number">5.0.4.</span> <span class="nav-text">4.ingress-nginx</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%AF%B9%E6%AF%94-Traefik-%E5%92%8C-kong-ingress-%E7%9A%84%E6%8F%92%E4%BB%B6%E6%9C%BA%E5%88%B6"><span class="nav-number">5.0.5.</span> <span class="nav-text">对比 Traefik 和 kong ingress 的插件机制:</span></a></li></ol></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">juneson</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">7</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">categories</span>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">juneson</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
